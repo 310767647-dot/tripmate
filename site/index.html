@@ -354,6 +354,15 @@ textarea.input{resize:vertical;min-height:74px}
 .export-opt:hover{border-color:var(--accent-line);background:var(--accent-soft)}
 .export-opt b{display:block;font-size:14px}
 .export-opt span{font-size:12.5px;color:var(--muted)}
+/* 手机端用户管理：卡片式布局 */
+.ucard{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;background:var(--surface)}
+.uc-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.uc-top b{font-size:14.5px}
+.uc-line{font-size:12.5px;color:var(--muted);margin:3px 0;line-height:1.5}
+.uc-line b{color:var(--ink)}
+.uc-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.uc-btns .btn{padding:8px 11px}
+#mapCanvas{width:100%;height:300px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);z-index:1}
 </style>
 </head>
 <body>
@@ -1549,19 +1558,64 @@ function importData(){
   input.click();
 }
 
-/* ================= map modal（地图点位） ================= */
+/* ================= map modal（地图点位，高德底图·国内可用） ================= */
+let leafletLoading=null;
+function loadLeaflet(){
+  if(window.L) return Promise.resolve();
+  if(leafletLoading) return leafletLoading;
+  leafletLoading=new Promise(function(res,rej){
+    const css=document.createElement("link"); css.rel="stylesheet";
+    css.href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css";
+    document.head.appendChild(css);
+    const s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js";
+    s.onload=function(){ res(); };
+    s.onerror=function(){ leafletLoading=null; rej(new Error("地图组件加载失败")); };
+    document.head.appendChild(s);
+  });
+  return leafletLoading;
+}
+function wgs2gcj(lat,lng){
+  const a=6378245.0, ee=0.00669342162296594323, PI=Math.PI;
+  if(lng<=73.66||lng>=135.05||lat<=3.86||lat>=53.55) return [lat,lng];
+  let dlat=-100+2*lng+3*lat+0.2*lat*lat+0.1*lng*lat+0.2*Math.sqrt(Math.abs(lng));
+  dlat+=(20*Math.sin(6*lng*PI)+20*Math.sin(2*lng*PI))*2/3;
+  dlat+=(20*Math.sin(lat*PI)+40*Math.sin(lat/3*PI))*2/3;
+  dlat+=(160*Math.sin(lat/12*PI)+320*Math.sin(lat*PI/30))*2/3;
+  let dlng=300+lng+2*lat+0.1*lng*lng+0.1*lng*lat+0.1*Math.sqrt(Math.abs(lng));
+  dlng+=(20*Math.sin(6*lng*PI)+20*Math.sin(2*lng*PI))*2/3;
+  dlng+=(20*Math.sin(lng*PI)+40*Math.sin(lng/3*PI))*2/3;
+  dlng+=(150*Math.sin(lng/12*PI)+300*Math.sin(lng/30*PI))*2/3;
+  const radlat=lat/180*PI;
+  let magic=Math.sin(radlat); magic=1-ee*magic*magic;
+  const sqrtmagic=Math.sqrt(magic);
+  dlat=(dlat*180)/((a*(1-ee))/(magic*sqrtmagic)*PI);
+  dlng=(dlng*180)/(a/sqrtmagic*Math.cos(radlat)*PI);
+  return [lat+dlat,lng+dlng];
+}
 function osmLink(l){
   if(!l||l.lat==null||l.lng==null) return "";
-  return "https://www.openstreetmap.org/?mlat="+encodeURIComponent(l.lat)+"&mlon="+encodeURIComponent(l.lng)+"#map=16/"+encodeURIComponent(l.lat)+"/"+encodeURIComponent(l.lng);
+  const g=wgs2gcj(l.lat,l.lng);
+  return "https://uri.amap.com/marker?position="+g[1]+","+g[0]+"&name="+encodeURIComponent(l.name||"位置");
 }
 function openMapModal(locId){
   const l=STATE.locations.filter(function(x){return x.id===locId;})[0]; if(!l) return;
   if(l.lat==null||l.lng==null){ toast("该地点没有坐标","手动添加且未填坐标，无地图点位","warn"); return; }
-  const lat=l.lat, lng=l.lng, dLng=0.010, dLat=0.006;
-  const embed="https://www.openstreetmap.org/export/embed.html?bbox="+(lng-dLng)+","+(lat-dLat)+","+(lng+dLng)+","+(lat+dLat)+"&layer=mapnik&marker="+encodeURIComponent(lat)+","+encodeURIComponent(lng);
+  const gc=wgs2gcj(l.lat,l.lng);
+  const amap=osmLink(l);
   openModal({title:l.name||"地图位置",
-    body:'<iframe class="mapframe" src="'+embed+'" loading="lazy" title="地图点位"></iframe><p style="font-size:12.5px;color:var(--muted);margin-top:10px">点位名称：<b style="color:var(--ink)">'+esc(l.name||"未命名")+'</b> · 坐标 '+lat.toFixed(6)+", "+lng.toFixed(6)+(l.note?(" · "+esc(l.note)):"")+"</p>",
-    foot:'<a class="btn" target="_blank" rel="noopener" href="'+osmLink(l)+'">打开大地图</a><button class="btn" data-close>关闭</button>'});
+    body:'<div id="mapCanvas"></div><p style="font-size:12.5px;color:var(--muted);margin-top:10px">点位名称：<b style="color:var(--ink)">'+esc(l.name||"未命名")+'</b> · 坐标 '+l.lat.toFixed(6)+", "+l.lng.toFixed(6)+(l.note?(" · "+esc(l.note)):"")+"</p>",
+    foot:'<a class="btn" target="_blank" rel="noopener" href="'+amap+'">在高德地图打开</a><button class="btn" data-close>关闭</button>'});
+  loadLeaflet().then(function(){
+    const el=document.getElementById("mapCanvas"); if(!el) return;
+    const map=L.map(el,{zoomControl:true}).setView([gc[0],gc[1]],15);
+    L.tileLayer("https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}",{subdomains:"1234",maxZoom:18}).addTo(map);
+    L.marker([gc[0],gc[1]]).addTo(map).bindPopup(l.name||"位置").openPopup();
+    setTimeout(function(){ try{ map.invalidateSize(); }catch(e){} },300);
+  }).catch(function(e){
+    const el=document.getElementById("mapCanvas");
+    if(el) el.innerHTML='<p style="padding:20px;color:var(--muted);font-size:13px">'+esc(e.message)+'。坐标：'+l.lat.toFixed(5)+", "+l.lng.toFixed(5)+'</p>';
+  });
 }
 
 /* ================= admin（管理员后台） ================= */
@@ -1573,6 +1627,27 @@ async function renderAdmin(){
   try{ const r=await api("GET","/api/admin/users"); users=r.users||[]; ADMIN_CACHE=users; }
   catch(e){ wrap.innerHTML='<div style="padding:14px;color:var(--danger);font-size:13px">加载失败：'+esc(e.message)+'</div>'; return; }
   if(!users.length){ wrap.innerHTML='<div class="empty" style="padding:26px"><b>还没有用户</b><p>点击右上角「新建用户」创建账号。</p></div>'; return; }
+  const narrow=window.matchMedia("(max-width:640px)").matches;
+  if(narrow){
+    /* 手机端：卡片式布局 */
+    let c="";
+    users.forEach(function(u){
+      const ct=u.counts;
+      c+='<div class="ucard">'
+        +'<div class="uc-top"><b>'+esc(u.name)+"</b><span class=\"role-tag "+u.role+'">'+(u.role==="admin"?"管理员":"普通用户")+"</span></div>"
+        +'<div class="uc-line">登录账号：<b>'+esc(u.username||u.email)+"</b></div>"
+        +'<div class="uc-line">出差 '+((ct&&ct.trips)||0)+' · 开销 '+((ct&&ct.expenses)||0)+' · 定位 '+((ct&&ct.locations)||0)+' · 照片 '+((ct&&ct.photos)||0)+' · 提醒 '+((ct&&ct.reminders)||0)+"</div>"
+        +'<div class="uc-line">最近同步：'+(u.updatedAt?esc(fmtDT(u.updatedAt)):"—")+"</div>"
+        +'<div class="uc-btns">'
+        +'<button class="btn btn-ghost btn-sm" data-admin-open="'+u.id+'">查看/修改数据</button>'
+        +'<button class="btn btn-ghost btn-sm" data-admin-export="'+u.id+'">导出</button>'
+        +'<button class="btn btn-ghost btn-sm" data-admin-edit="'+u.id+'">编辑</button>'
+        +'<button class="btn btn-ghost btn-sm" data-admin-del="'+u.id+'">删除</button>'
+        +"</div></div>";
+    });
+    wrap.innerHTML=c;
+    return;
+  }
   let h='<table class="atable"><thead><tr><th>用户</th><th>登录账号</th><th>角色</th><th>出差/开销/定位/照片/提醒</th><th>最近同步</th><th style="width:300px">操作</th></tr></thead><tbody>';
   users.forEach(function(u){
     const c=u.counts;
