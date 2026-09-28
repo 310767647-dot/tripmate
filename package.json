@@ -1,0 +1,9 @@
+{
+  "name": "tripmate",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@netlify/blobs": "^11.1.1"
+  }
+}

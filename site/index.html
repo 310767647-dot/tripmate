@@ -1,0 +1,2014 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1B2430">
+<meta name="description" content="出差助手 TripMate — 记录出差途中的开销、定位、照片，并设置提醒。">
+<title>出差助手 · TripMate</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/manrope@5.2.8/index.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/noto-sans-sc@5.2.10/index.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/jetbrains-mono@5.2.8/index.css" rel="stylesheet">
+<style>
+:root{
+  --bg:#F4F1EA;
+  --surface:#FFFFFF;
+  --surface-2:#FAF8F3;
+  --ink:#1B2430;
+  --ink-2:#374151;
+  --muted:#6B7280;
+  --faint:#9AA1AB;
+  --line:#E7E2D7;
+  --line-2:#F0ECE3;
+  --accent:#C2410C;
+  --accent-ink:#FFFFFF;
+  --accent-soft:#FBEADF;
+  --accent-line:#EFC6B0;
+  --ok:#15803D;
+  --ok-soft:#E6F3EB;
+  --warn:#B45309;
+  --warn-soft:#FBF0E0;
+  --danger:#B91C1C;
+  --danger-soft:#FBE9E9;
+  --radius:16px;
+  --radius-sm:11px;
+  --radius-lg:24px;
+  --shadow:0 1px 2px rgba(27,36,48,.05), 0 14px 30px -18px rgba(27,36,48,.30);
+  --shadow-sm:0 1px 2px rgba(27,36,48,.07);
+  --font-display:"Manrope Variable","Noto Sans SC Variable","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --font-body:"Manrope Variable","Noto Sans SC Variable","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono Variable","SFMono-Regular",Menlo,Consolas,monospace;
+  --topbar-h:60px;
+  --nav-w:232px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:15px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  line-break:strict;
+  overflow-wrap:break-word;
+  font-synthesis:none;
+}
+h1,h2,h3,h4{margin:0;font-family:var(--font-display);letter-spacing:-.01em}
+p{margin:0}
+button{font-family:inherit;font-size:inherit;color:inherit}
+input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+[hidden]{display:none !important}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--font-mono)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#D6D0C4;border-radius:20px;border:3px solid var(--bg)}
+
+/* ============ AUTH ============ */
+.auth{
+  position:fixed;inset:0;z-index:60;
+  display:grid;grid-template-columns:1fr;
+  background:
+    radial-gradient(1200px 600px at 85% -10%, #F7E9DF 0%, transparent 55%),
+    linear-gradient(180deg,#F7F5F0,#F1EDE4);
+  overflow:auto;
+}
+.auth-inner{width:100%;max-width:1080px;margin:auto;padding:28px;display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center;min-height:100%;}
+.auth-brand .kicker{display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.14em;text-transform:uppercase}
+.auth-brand h1{font-size:clamp(30px,4.4vw,50px);line-height:1.06;margin:16px 0 14px;text-wrap:balance}
+.auth-brand .sub{font-size:16px;color:var(--ink-2);max-width:32em}
+.auth-feats{margin-top:26px;display:grid;gap:12px}
+.auth-feat{display:flex;gap:12px;align-items:flex-start}
+.auth-feat .fi{flex:none;width:34px;height:34px;border-radius:10px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;color:var(--accent);box-shadow:var(--shadow-sm)}
+.auth-feat b{display:block;font-size:14px}
+.auth-feat span{font-size:13px;color:var(--muted)}
+.auth-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:26px}
+.tabs-seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:20px}
+.tabs-seg button{flex:1;border:0;background:transparent;padding:9px;border-radius:9px;font-weight:700;font-size:14px;color:var(--muted);cursor:pointer;transition:.15s}
+.tabs-seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow-sm)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-2);margin-bottom:6px;letter-spacing:.01em}
+.field .hint{font-weight:500;color:var(--faint);font-size:12px}
+.input,select.input,textarea.input{
+  width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--surface-2);color:var(--ink);outline:none;transition:.15s;
+}
+.input:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea.input{resize:vertical;min-height:74px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:700;transition:.15s;white-space:nowrap}
+.btn:hover{border-color:#D6D0C4}
+.btn-accent{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn-accent:hover{filter:brightness(1.06)}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn-ghost:hover{background:var(--surface-2);color:var(--ink)}
+.btn-block{width:100%}
+.btn-sm{padding:7px 11px;font-size:13px;border-radius:9px}
+.btn-danger{color:var(--danger);border-color:var(--danger-soft)}
+.err{color:var(--danger);font-size:13px;margin-top:4px}
+
+/* ============ APP SHELL ============ */
+.app{min-height:100vh;display:flex;flex-direction:column}
+.topbar{
+  position:sticky;top:0;z-index:40;height:var(--topbar-h);
+  display:flex;align-items:center;gap:14px;padding:0 18px;
+  background:rgba(244,241,234,.86);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.01em}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:var(--ink);color:#FBEADF;display:grid;place-items:center}
+.brand-mark svg{width:19px;height:19px}
+.brand .b-sub{font-size:11px;font-weight:700;color:var(--faint);letter-spacing:.16em;text-transform:uppercase;display:block;line-height:1}
+.trip-switch{margin-left:6px;display:flex;align-items:center;gap:9px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:7px 11px;cursor:pointer;max-width:340px;box-shadow:var(--shadow-sm)}
+.trip-switch:hover{border-color:#D6D0C4}
+.trip-switch .ts-name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trip-switch .ts-meta{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.trip-switch svg{width:16px;height:16px;color:var(--muted);flex:none}
+.topbar .spacer{flex:1}
+.iconbtn{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;color:var(--ink-2);transition:.15s}
+.iconbtn:hover{border-color:#D6D0C4;color:var(--ink)}
+.iconbtn svg{width:18px;height:18px}
+.user-chip{display:flex;align-items:center;gap:9px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:5px 11px 5px 5px;cursor:pointer;box-shadow:var(--shadow-sm)}
+.user-chip:hover{border-color:#D6D0C4}
+.avatar{width:28px;height:28px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+.user-chip b{font-size:13.5px}
+
+.shell{display:grid;grid-template-columns:var(--nav-w) 1fr;flex:1;min-height:0}
+.sidenav{padding:18px 12px;border-right:1px solid var(--line);position:sticky;top:var(--topbar-h);align-self:start;height:calc(100vh - var(--topbar-h));overflow:auto}
+.navlist{display:grid;gap:3px}
+.navitem{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;border:0;background:transparent;color:var(--ink-2);cursor:pointer;font-weight:650;text-align:left;width:100%;transition:.14s;position:relative}
+.navitem svg{width:19px;height:19px;color:var(--faint);flex:none;transition:.14s}
+.navitem:hover{background:var(--surface-2);color:var(--ink)}
+.navitem.on{background:var(--ink);color:#fff}
+.navitem.on svg{color:#FBEADF}
+.navitem .count{margin-left:auto;font-size:12px;font-variant-numeric:tabular-nums;background:var(--surface-2);color:var(--muted);border-radius:20px;padding:1px 8px}
+.navitem.on .count{background:rgba(255,255,255,.16);color:#fff}
+.nav-side-label{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:14px 12px 6px}
+
+.main{padding:26px 30px 90px;max-width:1180px;width:100%;margin:0 auto;min-width:0}
+.view-head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.view-head h2{font-size:24px}
+.view-head p{color:var(--muted);font-size:13.5px}
+.view-head .grow{flex:1}
+
+/* ============ BOARDING PASS CARD ============ */
+.bp{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow);overflow:hidden;position:relative;
+  display:grid;grid-template-columns:1.4fr .9fr;
+}
+.bp-main{padding:24px 26px;position:relative}
+.bp-main::after{content:"";position:absolute;top:0;bottom:0;right:0;width:0;border-left:2px dashed var(--line)}
+.bp .kicker{font-size:11.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.bp .city{display:flex;align-items:center;gap:14px;margin:14px 0 6px}
+.bp .city .code{font-size:clamp(26px,3.6vw,38px);font-weight:800;letter-spacing:-.02em;line-height:1}
+.bp .city .arrow{flex:none;color:var(--accent)}
+.bp .city .arrow svg{width:26px;height:26px}
+.bp .city .fromto{font-size:12px;color:var(--muted);font-weight:600}
+.bp .dates{margin-top:12px;display:flex;gap:26px;flex-wrap:wrap}
+.bp .dates div span{display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.bp .dates div b{font-size:15px;font-weight:700}
+.bp-stub{padding:24px 22px;background:var(--surface-2);display:flex;flex-direction:column;justify-content:center;gap:12px}
+.bp .notch{position:absolute;width:22px;height:22px;border-radius:50%;background:var(--bg);border:1px solid var(--line);left:calc(60.8% - 11px)}
+.bp .notch.t{top:-12px}.bp .notch.b{bottom:-12px}
+.stamp{border:2px solid var(--accent);color:var(--accent);border-radius:12px;padding:8px 12px;text-align:center;transform:rotate(-4deg);font-weight:800;letter-spacing:.08em}
+.stamp b{display:block;font-size:16px;line-height:1.1}
+.stamp span{font-size:10px;letter-spacing:.18em;text-transform:uppercase}
+
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.stat .lbl{font-size:12px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
+.stat .lbl svg{width:14px;height:14px;color:var(--faint)}
+.stat .val{font-size:24px;font-weight:800;margin-top:5px;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.stat .val small{font-size:13px;font-weight:700;color:var(--muted)}
+
+/* ============ ROUTE / TIMELINE ============ */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
+.panel-head{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line-2)}
+.panel-head h3{font-size:15px}
+.panel-head .grow{flex:1}
+.panel-body{padding:16px 18px}
+.route{position:relative;padding-left:26px}
+.route::before{content:"";position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:linear-gradient(180deg,var(--accent),var(--accent-line))}
+.rnode{position:relative;padding:8px 0 16px}
+.rnode .dot{position:absolute;left:-26px;top:12px;width:16px;height:16px;border-radius:50%;background:var(--surface);border:2px solid var(--accent);display:grid;place-items:center}
+.rnode .dot i{width:6px;height:6px;border-radius:50%;background:var(--accent);display:block}
+.rnode .rhead{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.rnode .rhead b{font-size:14px}
+.rnode .rhead time{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+.rnode .rbody{font-size:13px;color:var(--muted);margin-top:2px}
+.rnode .amount{margin-left:auto;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+
+/* ============ LISTS ============ */
+.list{display:grid;gap:10px}
+.row{display:flex;align-items:center;gap:13px;padding:13px 15px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);transition:.14s}
+.row:hover{border-color:#DED9CC}
+.row .ico{flex:none;width:40px;height:40px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.row .ico svg{width:20px;height:20px}
+.row .ico.mut{background:var(--surface-2);color:var(--muted)}
+.row .meta{min-width:0;flex:1}
+.row .meta b{font-size:14.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .meta span{font-size:12.5px;color:var(--muted)}
+.row .right{text-align:right;display:flex;align-items:center;gap:6px}
+.row .money{font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink)}
+.row .thumb{width:46px;height:46px;border-radius:10px;object-fit:cover;border:1px solid var(--line);flex:none}
+.tag{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.tag.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.tag.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.tag.dim{background:transparent}
+.catbar{display:flex;height:10px;border-radius:20px;overflow:hidden;background:var(--surface-2);border:1px solid var(--line)}
+.catbar i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}
+.legend span{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.legend .sw{width:10px;height:10px;border-radius:3px}
+
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;box-shadow:var(--shadow-sm)}
+.pcard img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:var(--surface-2);cursor:zoom-in}
+.pcard .pcap{padding:9px 11px;display:flex;align-items:center;gap:8px}
+.pcard .pcap .pm{min-width:0;flex:1}
+.pcard .pcap b{font-size:12.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcard .pcap span{font-size:11px;color:var(--faint)}
+
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty .eico{width:52px;height:52px;margin:0 auto 12px;border-radius:14px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;color:var(--accent)}
+.empty .eico svg{width:24px;height:24px}
+.empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:3px}
+.empty p{font-size:13px;max-width:34ch;margin:0 auto 16px}
+
+.fab-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+
+/* ============ MODAL ============ */
+.scrim{position:fixed;inset:0;z-index:70;background:rgba(20,26,34,.5);backdrop-filter:blur(3px);display:grid;place-items:center;padding:18px;overflow:auto}
+.modal{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow);width:100%;max-width:470px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;animation:pop .18s ease}
+@keyframes pop{from{transform:translateY(8px);opacity:.6}to{transform:none;opacity:1}}
+.modal-head{display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line-2)}
+.modal-head h3{font-size:17px;flex:1}
+.modal-body{padding:20px;overflow:auto}
+.modal-foot{padding:15px 20px;border-top:1px solid var(--line-2);display:flex;gap:10px;justify-content:flex-end;background:var(--surface-2)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--surface-2);border-radius:20px;padding:7px 13px;font-size:13.5px;font-weight:650;cursor:pointer;transition:.14s}
+.chip:hover{border-color:#D6D0C4}
+.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.drop{border:1.5px dashed var(--line);border-radius:var(--radius-sm);padding:20px;text-align:center;color:var(--muted);cursor:pointer;background:var(--surface-2);transition:.14s}
+.drop:hover{border-color:var(--accent);color:var(--accent)}
+.drop svg{width:24px;height:24px;margin-bottom:6px}
+.preview{width:100%;border-radius:var(--radius-sm);border:1px solid var(--line);margin-top:12px;display:block;max-height:220px;object-fit:cover}
+
+/* ============ TOAST / MENU ============ */
+.toast-wrap{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;z-index:90;display:grid;gap:8px;width:min(92vw,400px)}
+.toast{background:var(--ink);color:#fff;border-radius:12px;padding:12px 15px;display:flex;gap:10px;align-items:flex-start;box-shadow:var(--shadow);animation:pop .18s ease}
+.toast b{font-size:13.5px;display:block}
+.toast span{font-size:12.5px;opacity:.85}
+.toast svg{width:17px;height:17px;flex:none;margin-top:1px}
+.toast.ok svg{color:#7FE0A0}.toast.warn svg{color:#FBC77A}.toast.err svg{color:#F6A6A6}
+.menu{position:absolute;z-index:80;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:7px;min-width:220px}
+.menu button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;padding:9px 11px;border-radius:9px;cursor:pointer;text-align:left;font-size:14px;color:var(--ink-2);font-weight:600}
+.menu button:hover{background:var(--surface-2);color:var(--ink)}
+.menu button svg{width:17px;height:17px;color:var(--faint)}
+.menu .sep{height:1px;background:var(--line-2);margin:6px 4px}
+.menu .mhead{padding:8px 11px 6px}
+.menu .mhead b{display:block;font-size:14px}
+.menu .mhead span{font-size:12px;color:var(--muted)}
+.menu .trip-opt{justify-content:flex-start}
+.menu .trip-opt .to-meta{margin-left:auto;font-size:11.5px;color:var(--faint)}
+
+/* ============ BOTTOM TABS ============ */
+.tabbar{display:none}
+.note{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;font-size:12.5px;color:var(--muted);display:flex;gap:9px}
+.note svg{width:16px;height:16px;flex:none;color:var(--accent);margin-top:2px}
+.help h4{font-size:15px;margin:16px 0 8px}
+.help ol,.help ul{margin:0;padding-left:20px;font-size:13.5px;color:var(--ink-2);display:grid;gap:5px}
+.help code{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-family:var(--font-mono);font-size:12px}
+.stack{display:grid;gap:18px}
+
+@media (max-width:980px){
+  .bp{grid-template-columns:1fr}
+  .bp-main::after{display:none}
+  .bp-stub{border-top:2px dashed var(--line)}
+  .bp .notch{display:none}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:860px){
+  :root{--topbar-h:56px}
+  .auth-inner{grid-template-columns:1fr;gap:26px;padding:22px}
+  .auth-brand h1{font-size:clamp(28px,8vw,38px)}
+  .shell{grid-template-columns:1fr}
+  .sidenav{display:none}
+  .main{padding:18px 15px 96px;max-width:none}
+  .brand .b-sub{display:none}
+  .trip-switch .ts-meta{display:none}
+  .trip-switch{max-width:none;flex:1;min-width:0}
+  .topbar{gap:10px;padding:0 13px}
+  .user-chip b{display:none}
+  .tabbar{
+    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:50;
+    background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-top:1px solid var(--line);
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+  }
+  .tabbar button{flex:1;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;border-radius:12px;color:var(--faint);font-size:10.5px;font-weight:700;cursor:pointer}
+  .tabbar button svg{width:21px;height:21px}
+  .tabbar button.on{color:var(--accent)}
+  .grid2{grid-template-columns:1fr}
+  .view-head h2{font-size:21px}
+}
+
+/* ============ 云同步状态 ============ */
+.sync-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:5px 11px;white-space:nowrap}
+.sync-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.sync-chip.ok{color:var(--ok)} .sync-chip.ok .dot{background:var(--ok)}
+.sync-chip.busy{color:var(--warn)} .sync-chip.busy .dot{background:var(--warn);animation:pulse 1s infinite}
+.sync-chip.err{color:var(--danger)} .sync-chip.err .dot{background:var(--danger)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@media (max-width:860px){ .sync-chip span.txt{display:none} .sync-chip{padding:5px 8px} }
+/* 手机端顶栏压缩：不重叠、不出横向滚动 */
+@media (max-width:640px){
+  .topbar{gap:6px;padding:0 10px}
+  .brand{gap:6px}
+  .brand>span:last-child{display:none}
+  .trip-switch{flex:1 1 auto;min-width:0;max-width:none;margin-left:0;padding:7px 9px;gap:7px}
+  .trip-switch>span:nth-child(2){min-width:0;flex:1;overflow:hidden}
+  .trip-switch .ts-name{font-size:13px;max-width:100%}
+  .trip-switch .ts-meta{display:none}
+  .iconbtn{width:34px;height:34px;border-radius:10px;flex:none}
+  .user-chip{padding:4px 5px 4px 4px;gap:0;flex:none}
+  .user-chip .avatar{width:28px;height:28px;font-size:13px}
+  .sync-chip{display:none}
+  .view-head{flex-wrap:wrap;gap:8px}
+}
+
+/* ============ 管理员后台 ============ */
+.proxybar{display:flex;align-items:center;gap:10px;background:var(--accent);color:#fff;padding:8px 16px;font-size:13px;font-weight:700}
+.proxybar button{border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:8px;padding:5px 12px;font-weight:700;cursor:pointer}
+.atable{width:100%;border-collapse:collapse;font-size:13px}
+.atable th{ text-align:left;font-size:12px;color:var(--faint);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.atable td{padding:10px;border-bottom:1px solid var(--line-2);vertical-align:middle}
+.atable tr:last-child td{border-bottom:0}
+.role-tag{display:inline-block;font-size:11px;font-weight:800;border-radius:6px;padding:2px 8px}
+.role-tag.admin{background:var(--accent-soft);color:var(--accent)}
+.role-tag.user{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.mapframe{width:100%;height:300px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2)}
+.export-opt{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px 14px;cursor:pointer;transition:.14s;background:var(--surface-2)}
+.export-opt:hover{border-color:var(--accent-line);background:var(--accent-soft)}
+.export-opt b{display:block;font-size:14px}
+.export-opt span{font-size:12.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<!-- ===================== AUTH ===================== -->
+<div class="auth" id="authScreen">
+  <div class="auth-inner">
+    <div class="auth-brand">
+      <span class="kicker">TripMate · 出差助手</span>
+      <h1>把一整趟出差，收进一个网址里。</h1>
+      <p class="sub">从出发到返程，随手记录每一笔开销、每一个到过的地方、每一张票据照片，并按时提醒你该做的事。手机与电脑打开同一个网址即可使用。</p>
+      <div class="auth-feats">
+        <div class="auth-feat"><span class="fi" data-icon="wallet"></span><div><b>开销台账</b><span>分类记账，自动汇总总额与占比</span></div></div>
+        <div class="auth-feat"><span class="fi" data-icon="pin"></span><div><b>定位轨迹</b><span>一键采集坐标，形成行程路线</span></div></div>
+        <div class="auth-feat"><span class="fi" data-icon="camera"></span><div><b>票据照片</b><span>拍照或选图，压缩后云端同步</span></div></div>
+        <div class="auth-feat"><span class="fi" data-icon="bell"></span><div><b>日程提醒</b><span>到点桌面通知 + 应用内提示</span></div></div>
+        <div class="auth-feat"><span class="fi" data-icon="download"></span><div><b>归档导出</b><span>一键导出 Word / Excel / PDF 存档</span></div></div>
+      </div>
+    </div>
+    <div class="auth-card">
+      <div class="tabs-seg" id="authTabs">
+        <button data-authtab="login" class="on">登录</button>
+        <button data-authtab="register">注册</button>
+      </div>
+      <form id="loginForm" autocomplete="on">
+        <div class="field"><label>邮箱 / 用户名</label><input class="input" type="text" name="account" placeholder="you@example.com 或 admin" required></div>
+        <div class="field"><label>密码</label><input class="input" type="password" name="password" placeholder="请输入密码" required></div>
+        <div class="err" id="loginErr" hidden></div>
+        <button class="btn btn-accent btn-block" type="submit" style="margin-top:6px">登录</button>
+      </form>
+      <form id="registerForm" hidden>
+        <div class="field"><label>昵称</label><input class="input" type="text" name="name" placeholder="你的名字" required></div>
+        <div class="field"><label>邮箱</label><input class="input" type="email" name="email" placeholder="you@example.com" required></div>
+        <div class="field"><label>密码 <span class="hint">至少 6 位</span></label><input class="input" type="password" name="password" placeholder="设置密码" required></div>
+        <div class="err" id="regErr" hidden></div>
+        <button class="btn btn-accent btn-block" type="submit" style="margin-top:6px">创建账号</button>
+      </form>
+      <div style="display:flex;align-items:center;gap:10px;margin:16px 0">
+        <span style="flex:1;height:1px;background:var(--line)"></span>
+        <span style="font-size:12px;color:var(--faint)">或</span>
+        <span style="flex:1;height:1px;background:var(--line)"></span>
+      </div>
+      <button class="btn btn-block" id="guestBtn">以体验账号快速进入</button>
+      <p style="font-size:11.5px;color:var(--faint);margin-top:14px;text-align:center">注册账号后数据自动云端同步：同一账号在手机、电脑登录即可共享全部记录。体验账号仅保存在本机。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div class="app" id="app" hidden>
+  <div class="proxybar" id="proxyBar" hidden><span data-icon="info" style="display:inline-flex"></span><span id="proxyBarTxt">正在以管理员身份查看用户数据</span><span style="flex:1"></span><button id="proxyExit">退出代管，返回我的账号</button></div>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" data-icon="plane"></span>
+      <span>出差助手<span class="b-sub">TripMate</span></span>
+    </div>
+    <button class="trip-switch" id="tripSwitch" title="切换出差">
+      <span data-icon="pin"></span>
+      <span>
+        <span class="ts-name" id="tsName">我的出差</span>
+        <span class="ts-meta" id="tsMeta">—</span>
+      </span>
+      <span data-icon="chevd"></span>
+    </button>
+    <span class="spacer"></span>
+    <span class="sync-chip" id="syncChip" title="云同步状态"><span class="dot"></span><span class="txt">未登录</span></span>
+    <button class="iconbtn" id="btnExport" title="导出归档文档" data-icon="download"></button>
+    <button class="iconbtn" id="btnNewTrip" title="新建出差" data-icon="plus"></button>
+    <button class="iconbtn" id="btnSettings" title="设置" data-icon="settings"></button>
+    <button class="user-chip" id="userChip">
+      <span class="avatar" id="userAvatar">·</span>
+      <b id="userName">用户</b>
+    </button>
+  </header>
+
+  <div class="shell">
+    <nav class="sidenav" id="sideNav" aria-label="主导航"></nav>
+    <main class="main" id="mainView">
+      <!-- OVERVIEW -->
+      <section class="view" data-view="overview">
+        <div class="view-head">
+          <div class="grow"><h2>行程概览</h2><p id="ovLead">这一趟出差的关键信息</p></div>
+          <button class="btn btn-sm" id="ovAddBtn" data-add="expense"><span data-icon="plus"></span>记一笔</button>
+        </div>
+        <div class="bp" id="bpCard">
+          <div class="bp-main">
+            <span class="kicker" id="bpKicker">出差行程</span>
+            <div class="city">
+              <div><div class="code" id="bpFrom">出发</div><div class="fromto">出发地</div></div>
+              <span class="arrow" data-icon="plane"></span>
+              <div><div class="code" id="bpTo">目的地</div><div class="fromto">目的地</div></div>
+            </div>
+            <div class="dates">
+              <div><span>出发日期</span><b id="bpStart">—</b></div>
+              <div><span>返程日期</span><b id="bpEnd">—</b></div>
+              <div><span>行程天数</span><b id="bpDays">—</b></div>
+            </div>
+          </div>
+          <div class="bp-stub">
+            <div class="stamp"><b id="stampTotal">¥0</b><span>累计开销</span></div>
+            <div style="font-size:12.5px;color:var(--muted)" id="bpStubMeta">还没有记录</div>
+          </div>
+          <span class="notch t"></span><span class="notch b"></span>
+        </div>
+
+        <div class="stat-row" id="statRow"></div>
+
+        <div class="panel">
+          <div class="panel-head"><span data-icon="route" style="color:var(--accent);display:inline-flex"></span><h3>行程时间线</h3><span class="grow"></span><span style="font-size:12.5px;color:var(--muted)" id="tlCount"></span></div>
+          <div class="panel-body" id="timelineBody"></div>
+        </div>
+      </section>
+
+      <!-- EXPENSE -->
+      <section class="view" data-view="expense" hidden>
+        <div class="view-head">
+          <div class="grow"><h2>开销台账</h2><p>记录每一笔支出，自动汇总</p></div>
+          <button class="btn btn-accent btn-sm" data-add="expense"><span data-icon="plus"></span>记一笔开销</button>
+        </div>
+        <div class="stack">
+          <div class="stat-row" id="expStatRow" style="margin:0"></div>
+          <div class="panel"><div class="panel-head"><h3>分类占比</h3></div><div class="panel-body"><div id="catBreakdown"></div></div></div>
+          <div class="panel"><div class="panel-head"><h3>明细</h3><span class="grow"></span><span style="font-size:12.5px;color:var(--muted)" id="expCount"></span></div><div class="panel-body"><div class="list" id="expList"></div></div></div>
+        </div>
+      </section>
+
+      <!-- LOCATION -->
+      <section class="view" data-view="location" hidden>
+        <div class="view-head">
+          <div class="grow"><h2>定位记录</h2><p>采集到过的地方，串成行程路线</p></div>
+          <button class="btn btn-accent btn-sm" id="locCaptureBtn"><span data-icon="nav"></span>采集当前位置</button>
+        </div>
+        <div class="note"><span data-icon="info"></span><div>浏览器会请求定位权限。若拒绝或在桌面端无法定位，可手动输入地点名称，地图链接会自动生成。</div></div>
+        <div class="panel" style="margin-top:16px"><div class="panel-head"><h3>位置列表</h3><span class="grow"></span><button class="btn btn-ghost btn-sm" data-add="location"><span data-icon="plus"></span>手动添加</button></div><div class="panel-body"><div class="list" id="locList"></div></div></div>
+      </section>
+
+      <!-- PHOTO -->
+      <section class="view" data-view="photo" hidden>
+        <div class="view-head">
+          <div class="grow"><h2>票据照片</h2><p>拍照或选择图片，压缩后自动云端同步</p></div>
+          <button class="btn btn-accent btn-sm" data-add="photo"><span data-icon="camera"></span>添加照片</button>
+        </div>
+        <div class="photo-grid" id="photoGrid"></div>
+      </section>
+
+      <!-- REMINDER -->
+      <section class="view" data-view="reminder" hidden>
+        <div class="view-head">
+          <div class="grow"><h2>日程提醒</h2><p>到点用桌面通知与页面提示提醒你</p></div>
+          <button class="btn btn-accent btn-sm" data-add="reminder"><span data-icon="plus"></span>添加提醒</button>
+        </div>
+        <div class="note" id="notifNote"><span data-icon="bell"></span><div>开启通知后，到达设定时间会弹出桌面提醒（需保持或重新打开本页面）。</div></div>
+        <div class="stack" style="margin-top:16px">
+          <div class="panel"><div class="panel-head"><h3>待办提醒</h3><span class="grow"></span><span style="font-size:12.5px;color:var(--muted)" id="remUpCount"></span></div><div class="panel-body"><div class="list" id="remUpList"></div></div></div>
+          <div class="panel"><div class="panel-head"><h3>已过期 / 已完成</h3></div><div class="panel-body"><div class="list" id="remPastList"></div></div></div>
+        </div>
+      </section>
+
+      <!-- ADMIN -->
+      <section class="view" data-view="admin" hidden>
+        <div class="view-head">
+          <div class="grow"><h2>用户管理</h2><p>创建账号、分配权限、查看与修正所有用户的出差数据</p></div>
+          <button class="btn btn-accent btn-sm" id="adminAddUser"><span data-icon="plus"></span>新建用户</button>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>账号列表</h3><span class="grow"></span><button class="btn btn-ghost btn-sm" id="adminRefresh" data-icon="clock">刷新</button></div>
+          <div class="panel-body" style="overflow-x:auto"><div id="adminUserTable"></div></div>
+        </div>
+        <div class="note" id="adminExportNote" style="margin-top:16px"><span data-icon="download"></span><div>需要给公司归档全部数据？可按用户、按出差条目筛选导出 Word / Excel / PDF。<div style="margin-top:10px"><button class="btn btn-sm btn-accent" id="adminExportBtn" data-icon="download">管理员批量导出</button></div></div></div>
+      </section>
+    </main>
+  </div>
+
+  <nav class="tabbar" id="tabBar" aria-label="底部导航"></nav>
+</div>
+
+<div id="modalRoot"></div>
+<div class="toast-wrap" id="toastRoot"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= storage layer ================= */
+const MEM = {};
+const LS = (function(){
+  try{
+    const k = "__tm_probe__";
+    window.localStorage.setItem(k,"1");
+    window.localStorage.removeItem(k);
+    return window.localStorage;
+  }catch(e){
+    return {
+      getItem:function(k){ return Object.prototype.hasOwnProperty.call(MEM,k)?MEM[k]:null; },
+      setItem:function(k,v){ MEM[k]=String(v); },
+      removeItem:function(k){ delete MEM[k]; }
+    };
+  }
+})();
+
+const DB_NAME="tripmate", STORE="kv", KEY="state";
+function idbOpen(){
+  return new Promise(function(res,rej){
+    if(!("indexedDB" in window)){ rej(new Error("no-idb")); return; }
+    const req = window.indexedDB.open(DB_NAME,2);
+    req.onupgradeneeded = function(){ const db=req.result; if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE); if(!db.objectStoreNames.contains("photos")) db.createObjectStore("photos"); };
+    req.onsuccess = function(){ res(req.result); };
+    req.onerror = function(){ rej(req.error||new Error("idb-error")); };
+  });
+}
+async function loadState(){
+  try{
+    const db = await idbOpen();
+    const v = await new Promise(function(res,rej){
+      const tx=db.transaction(STORE,"readonly");
+      const r=tx.objectStore(STORE).get(KEY);
+      r.onsuccess=function(){ res(r.result||null); };
+      r.onerror=function(){ rej(r.error); };
+    });
+    if(v) return v;
+  }catch(e){ /* fall through */ }
+  try{ const raw = LS.getItem(KEY); return raw?JSON.parse(raw):null; }catch(e2){ return null; }
+}
+let saveTimer=null;
+let lastLocalWrite=0;
+async function persistStateNow(){
+  try{
+    const db=await idbOpen();
+    await new Promise(function(res,rej){
+      const tx=db.transaction(STORE,"readwrite");
+      tx.objectStore(STORE).put(STATE,KEY);
+      tx.oncomplete=function(){ res(); };
+      tx.onerror=function(){ rej(tx.error); };
+    });
+    lastLocalWrite=Date.now();
+    try{ LS.setItem("tm_lastwrite",String(lastLocalWrite)); }catch(e){}
+    scheduleCloudSave();
+    return;
+  }catch(e){}
+  try{ LS.setItem(KEY, JSON.stringify(STATE)); lastLocalWrite=Date.now(); LS.setItem("tm_lastwrite",String(lastLocalWrite)); }catch(e2){}
+  scheduleCloudSave();
+}
+function saveState(){
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer=setTimeout(function(){ saveTimer=null; persistStateNow(); }, 120);
+}
+
+/* ================= cloud sync（云端同步） ================= */
+const CLOUD={token:null,email:null,role:null,proxy:null,adminHome:null,uploaded:null,errToasted:false};
+let ADMIN_CACHE=[];
+function loadCloudSession(){
+  try{ CLOUD.token=LS.getItem("tm_token")||null; CLOUD.email=LS.getItem("tm_email")||null; }catch(e){}
+  try{ lastLocalWrite=parseInt(LS.getItem("tm_lastwrite")||"0",10)||0; }catch(e){}
+  CLOUD.uploaded=new Set();
+  try{ const raw=LS.getItem("tm_uploaded"); const a=raw?JSON.parse(raw):[]; if(Array.isArray(a)) a.forEach(function(x){ CLOUD.uploaded.add(x); }); }catch(e){}
+}
+function saveCloudSession(){
+  try{
+    if(CLOUD.token){ LS.setItem("tm_token",CLOUD.token); LS.setItem("tm_email",CLOUD.email||""); }
+    else{ LS.removeItem("tm_token"); LS.removeItem("tm_email"); }
+    LS.setItem("tm_uploaded", JSON.stringify(Array.from(CLOUD.uploaded).slice(0,800)));
+  }catch(e){}
+}
+function isAdmin(){ const u=me(); return !!(u&&u.role==="admin"); }
+function canEdit(){ return isAdmin()||!!CLOUD.proxy; }
+function syncActive(){ const u=me(); return !!(CLOUD.token&&u&&!u.local); }
+async function api(method,path,body){
+  const opts={method:method}; opts.headers={};
+  if(CLOUD.token) opts.headers["Authorization"]="Bearer "+CLOUD.token;
+  if(body!==undefined){ opts.headers["Content-Type"]="application/json"; opts.body=JSON.stringify(body); }
+  let r;
+  try{ r=await fetch(path,opts); }
+  catch(e){ throw new Error("网络连接失败，请检查网络"); }
+  let d=null; try{ d=await r.json(); }catch(e){}
+  if(!r.ok){ const err=new Error((d&&d.error)?d.error:("请求失败("+r.status+")")); err.status=r.status; throw err; }
+  return d||{};
+}
+function setSyncStatus(state,msg){
+  const c=$("#syncChip"); if(!c) return;
+  c.className="sync-chip "+(state||"");
+  const txt={ok:"已同步",busy:"同步中…",err:"同步失败","":"未登录"}[state||""]||(msg||"");
+  const t=c.querySelector(".txt"); if(t) t.textContent=msg&&state==="err"?msg:txt;
+  c.title=msg||({"ok":"数据已自动同步到云端","busy":"正在同步到云端…","err":"同步失败，将自动重试","":"登录后自动云同步"}[state||""]||"");
+}
+async function photoCacheGet(id){
+  try{
+    const db=await idbOpen();
+    return await new Promise(function(res){
+      const tx=db.transaction("photos","readonly");
+      const r=tx.objectStore("photos").get(id);
+      r.onsuccess=function(){ res(r.result||null); }; r.onerror=function(){ res(null); };
+    });
+  }catch(e){ return null; }
+}
+async function photoCacheSet(id,dataUrl){
+  try{
+    const db=await idbOpen();
+    await new Promise(function(res,rej){
+      const tx=db.transaction("photos","readwrite");
+      tx.objectStore("photos").put(dataUrl,id);
+      tx.oncomplete=function(){ res(); }; tx.onerror=function(){ rej(tx.error); };
+    });
+  }catch(e){}
+}
+function packUserData(userId){
+  const f=function(arr){ return arr.filter(function(x){ return x.userId===userId; }); };
+  return {
+    trips:f(STATE.trips),
+    expenses:f(STATE.expenses),
+    locations:f(STATE.locations),
+    photos:f(STATE.photos).map(function(p){ return {id:p.id,userId:p.userId,tripId:p.tripId,name:p.name,ts:p.ts}; }),
+    reminders:f(STATE.reminders)
+  };
+}
+function applyCloudData(userId,cloud){
+  const localUrls={};
+  STATE.photos.forEach(function(p){ if(p.userId===userId&&p.dataUrl) localUrls[p.id]=p.dataUrl; });
+  const keys=["trips","expenses","locations","photos","reminders"];
+  keys.forEach(function(k){
+    const arr=(cloud&&cloud[k])||[];
+    const kept=STATE[k].filter(function(x){ return x.userId!==userId; });
+    arr.forEach(function(r){
+      const rec=Object.assign({},r); rec.userId=userId;
+      if(k==="photos"&&!rec.dataUrl&&localUrls[rec.id]) rec.dataUrl=localUrls[rec.id];
+      kept.push(rec);
+    });
+    STATE[k]=kept;
+  });
+}
+function scheduleCloudSave(){
+  if(!syncActive()&&!CLOUD.proxy) return;
+  cloudDirty=true;
+  if(!cloudTimer) cloudTimer=setTimeout(cloudSync,600);
+}
+let cloudTimer=null,cloudBusy=false,cloudDirty=false;
+async function cloudSync(){
+  cloudTimer=null;
+  if(!cloudDirty||cloudBusy) return;
+  const targetId=CLOUD.proxy?CLOUD.proxy.userId:STATE.sessionUserId;
+  const u=STATE.users.filter(function(x){ return x.id===targetId; })[0];
+  if(!u||!CLOUD.token||(u.local&&!CLOUD.proxy)){ cloudDirty=false; return; }
+  cloudBusy=true; setSyncStatus("busy");
+  try{
+    const data=packUserData(targetId);
+    if(CLOUD.proxy) await api("PUT","/api/admin/data/"+targetId,{data:data});
+    else await api("PUT","/api/data",{data:data});
+    const qs=CLOUD.proxy?("?u="+targetId):"";
+    for(const p of STATE.photos.filter(function(x){ return x.userId===targetId&&x.dataUrl; })){
+      if(!CLOUD.uploaded.has(p.id)){
+        await api("PUT","/api/photo/"+p.id+qs,{dataUrl:p.dataUrl});
+        CLOUD.uploaded.add(p.id); saveCloudSession();
+      }
+    }
+    const metaIds={}; data.photos.forEach(function(p){ metaIds[p.id]=1; });
+    Array.from(CLOUD.uploaded).forEach(function(id){
+      if(!metaIds[id]){
+        api("DELETE","/api/photo/"+id+qs).catch(function(){});
+        CLOUD.uploaded.delete(id); saveCloudSession();
+      }
+    });
+    cloudDirty=false; CLOUD.errToasted=false; setSyncStatus("ok");
+  }catch(e){
+    setSyncStatus("err");
+    if(!CLOUD.errToasted){ CLOUD.errToasted=true; toast("云端同步失败","稍后自动重试："+e.message,"warn"); }
+    if(e.status===403&&!CLOUD.proxy){ pullLatest().then(function(){ refreshAll(); }); }
+  }finally{
+    cloudBusy=false;
+    if(cloudDirty&&!cloudTimer) cloudTimer=setTimeout(cloudSync,5000);
+  }
+}
+async function pullLatest(){
+  if(!syncActive()) return false;
+  try{
+    const uid=STATE.sessionUserId;
+    const r=await api("GET","/api/data");
+    if(r&&r.data){
+      if(lastLocalWrite>(r.updatedAt||0)){ scheduleCloudSave(); return false; }
+      const local=packUserData(uid);
+      if(JSON.stringify(r.data)!==JSON.stringify(local)){
+        applyCloudData(uid,r.data);
+        CLOUD.uploaded=new Set((r.data.photos||[]).map(function(p){ return p.id; })); saveCloudSession();
+        const t=curTrip()||myTrips()[0]; STATE.currentTripId=t?t.id:null;
+        await hydratePhotos();
+        lastLocalWrite=r.updatedAt||Date.now();
+        try{ LS.setItem("tm_lastwrite",String(lastLocalWrite)); }catch(e){}
+        saveState();
+        return true;
+      }
+    }
+  }catch(e){}
+  return false;
+}
+async function hydratePhotos(){
+  const jobs=[];
+  STATE.photos.forEach(function(p){
+    if(p.dataUrl) return;
+    jobs.push((async function(){
+      let d=await photoCacheGet(p.id);
+      if(!d&&CLOUD.token){
+        try{
+          const owner=CLOUD.proxy?CLOUD.proxy.userId:p.userId;
+          const q=(owner&&owner!==STATE.sessionUserId)||CLOUD.proxy?("?u="+owner):"";
+          const r=await api("GET","/api/photo/"+p.id+q);
+          if(r&&r.dataUrl){ d=r.dataUrl; photoCacheSet(p.id,d); }
+        }catch(e){}
+      }
+      if(d){ p.dataUrl=d; }
+    })());
+  });
+  if(!jobs.length) return false;
+  await Promise.all(jobs);
+  return true;
+}
+window.addEventListener("online",function(){ if(cloudDirty||syncActive()) scheduleCloudSave(); });
+window.addEventListener("focus",function(){ if(syncActive()&&!cloudBusy) pullLatest().then(function(ch){ if(ch) refreshAll(); }); });
+/* 页面切到后台/关闭前：立即落盘并尝试同步，避免快速刷新/退出丢改动 */
+document.addEventListener("visibilitychange",function(){
+  if(document.visibilityState==="hidden"){
+    if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; persistStateNow(); }
+    if(cloudDirty&&CLOUD.token&&!cloudBusy){ if(cloudTimer){ clearTimeout(cloudTimer); cloudTimer=null; } cloudSync(); }
+  }
+});
+
+/* ================= state ================= */
+let STATE = { users:[], trips:[], expenses:[], locations:[], photos:[], reminders:[], sessionUserId:null, currentTripId:null };
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function me(){ return STATE.users.filter(function(u){return u.id===STATE.sessionUserId;})[0]||null; }
+function myTrips(){ const u=me(); return u?STATE.trips.filter(function(t){return t.userId===u.id;}):[]; }
+function curTrip(){ const t=STATE.trips.filter(function(x){return x.id===STATE.currentTripId;})[0]; return (t&&t.userId===STATE.sessionUserId)?t:null; }
+function mine(arr){ return arr.filter(function(x){return x.userId===STATE.sessionUserId;}); }
+function tripSet(arr){ const t=curTrip(); return t?mine(arr).filter(function(x){return x.tripId===t.id;}):[]; }
+
+/* ================= utils ================= */
+function $(s,r){ return (r||document).querySelector(s); }
+function $$(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c]; }); }
+function money(n){ return "¥"+ (Math.round(n*100)/100).toLocaleString("zh-CN",{minimumFractionDigits:0,maximumFractionDigits:2}); }
+function pad(n){ return n<10?"0"+n:""+n; }
+function fmtDate(ts){ if(!ts) return "—"; const d=new Date(ts); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function fmtDT(ts){ if(!ts) return "—"; const d=new Date(ts); return fmtDate(ts)+" "+pad(d.getHours())+":"+pad(d.getMinutes()); }
+function dayStart(s){ const d=new Date(s+"T00:00:00"); return isNaN(d.getTime())?null:d.getTime(); }
+function relDay(ts){ const a=new Date(); a.setHours(0,0,0,0); const b=new Date(ts); b.setHours(0,0,0,0); const diff=Math.round((b-a)/86400000); if(diff===0) return "今天"; if(diff===1) return "明天"; if(diff===-1) return "昨天"; return diff>0?("还有"+diff+"天"):(Math.abs(diff)+"天前"); }
+function tripDays(t){ if(!t||!t.startDate) return "—"; const s=dayStart(t.startDate); const e=t.endDate?dayStart(t.endDate):null; if(!e) return "进行中"; let d=Math.round((e-s)/86400000)+1; if(d<1) d=1; return d+" 天"; }
+
+/* ================= icons ================= */
+const ICONS={
+  plane:'<path d="M2 12l20-8-8 20-3-9-9-3z"/>',
+  pin:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',
+  camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+  bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  wallet:'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M16.5 14.5h.01"/>',
+  route:'<circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h6a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6"/>',
+  nav:'<path d="M3 11l19-9-9 19-2-8-8-2z"/>',
+  info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+  plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.6.65 1.03 1.26 1.03H21a2 2 0 1 1 0 4h-.09c-.61 0-1.12.43-1.26 1z"/>',
+  chevd:'<path d="M6 9l6 6 6-6"/>',
+  user:'<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  trash:'<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  check:'<path d="M20 6L9 17l-5-5"/>',
+  x:'<path d="M18 6L6 18"/><path d="M6 6l12 12"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  map:'<path d="M9 4l-6 2v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14"/><path d="M15 6v14"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>',
+  logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
+  cloud:'<path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97A6 6 0 0 0 6.4 9.1 4 4 0 0 0 6.5 19h11z"/>',
+  receipt:'<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1z"/><path d="M8 8h8"/><path d="M8 12h8"/>',
+  calendar:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>',
+  tag:'<path d="M20.6 13.4L12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><path d="M7.5 7.5h.01"/>',
+  plane2:'<path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
+  pin2:'<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+  printer:'<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>'
+};
+function svg(name){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICONS[name]||"")+"</svg>"; }
+function renderIcons(root){ $$("[data-icon]",root||document).forEach(function(el){ if(el.getAttribute("data-icon-done")) return; el.setAttribute("data-icon-done","1"); el.innerHTML=svg(el.getAttribute("data-icon"))+el.innerHTML; }); }
+
+/* ================= categories ================= */
+const CATS=[
+  {id:"transport",name:"交通",color:"#C2410C"},
+  {id:"lodging",name:"住宿",color:"#B45309"},
+  {id:"meal",name:"餐饮",color:"#A9872F"},
+  {id:"client",name:"招待",color:"#7C6F3A"},
+  {id:"material",name:"物料",color:"#4B6B4A"},
+  {id:"other",name:"其他",color:"#6B7280"}
+];
+function catOf(id){ return CATS.filter(function(c){return c.id===id;})[0]||CATS[CATS.length-1]; }
+
+/* ================= toast ================= */
+function toast(title,msg,kind){
+  const root=$("#toastRoot");
+  const el=document.createElement("div");
+  el.className="toast "+(kind||"ok");
+  el.innerHTML='<span data-icon="'+(kind==="err"?"x":(kind==="warn"?"info":"check"))+'"></span><div><b>'+esc(title)+"</b>"+(msg?"<span>"+esc(msg)+"</span>":"")+"</div>";
+  root.appendChild(el);
+  renderIcons(el);
+  setTimeout(function(){ el.style.transition="opacity .3s, transform .3s"; el.style.opacity="0"; el.style.transform="translateY(6px)"; setTimeout(function(){ el.remove(); },320); }, 3200);
+}
+
+/* ================= modal ================= */
+let modalKeyHandler=null;
+function openModal(opts){
+  closeModal();
+  const root=$("#modalRoot");
+  const scrim=document.createElement("div");
+  scrim.className="scrim";
+  scrim.innerHTML='<div class="modal" role="dialog" aria-modal="true"><div class="modal-head"><h3>'+esc(opts.title)+'</h3><button class="iconbtn" data-close data-icon="x" aria-label="关闭"></button></div><div class="modal-body">'+(opts.body||"")+"</div>"+(opts.foot?'<div class="modal-foot">'+opts.foot+"</div>":"")+"</div>";
+  root.appendChild(scrim);
+  renderIcons(scrim);
+  scrim.addEventListener("click",function(e){ if(e.target===scrim||e.target.closest("[data-close]")) closeModal(); });
+  modalKeyHandler=function(e){ if(e.key==="Escape") closeModal(); };
+  document.addEventListener("keydown",modalKeyHandler);
+  if(opts.onMount) opts.onMount(scrim);
+  const first=$("input,select,textarea,button.btn",scrim);
+  if(first) setTimeout(function(){ try{ first.focus(); }catch(e){} },40);
+  return scrim;
+}
+function closeModal(){
+  const root=$("#modalRoot");
+  if(root) root.innerHTML="";
+  if(modalKeyHandler){ document.removeEventListener("keydown",modalKeyHandler); modalKeyHandler=null; }
+}
+
+/* ================= auth ================= */
+async function sha256(text){
+  try{
+    const buf=await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return Array.prototype.map.call(new Uint8Array(buf),function(b){ return ("0"+b.toString(16)).slice(-2); }).join("");
+  }catch(e){
+    let h=5381; for(let i=0;i<text.length;i++){ h=((h<<5)+h+text.charCodeAt(i))|0; }
+    return "d"+(h>>>0).toString(16);
+  }
+}
+function showAuth(){ $("#authScreen").hidden=false; $("#app").hidden=true; }
+function showApp(){ $("#authScreen").hidden=true; $("#app").hidden=false; refreshAll(); startTick(); setSyncStatus(syncActive()||CLOUD.proxy?"ok":""); }
+
+async function register(name,email,pass){
+  email=String(email||"").trim().toLowerCase();
+  if(!name||!name.trim()) throw new Error("请输入昵称");
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("邮箱格式不正确");
+  if(!pass||pass.length<6) throw new Error("密码至少 6 位");
+  if(STATE.users.some(function(u){return u.email===email;})) throw new Error("该邮箱已在本文设备注册，请直接登录");
+  const salt=uid();
+  const hash=await sha256(salt+"::"+pass);
+  const userId=uid();
+  let token=null, downgraded=false;
+  try{
+    const r=await api("POST","/api/register",{name:name.trim(),email:email,salt:salt,hash:hash,userId:userId});
+    token=r.token;
+  }catch(e){
+    if(e.status===409) throw e;
+    downgraded=true;
+    toast("暂时无法连接云端","账号先在本机使用，下次联网登录时会自动同步","warn");
+  }
+  const u={id:userId,name:name.trim(),email:email,salt:salt,hash:hash,createdAt:Date.now(),role:"user"};
+  if(token){ CLOUD.token=token; CLOUD.email=email; CLOUD.role="user"; CLOUD.proxy=null; CLOUD.uploaded=new Set(); CLOUD.errToasted=false; saveCloudSession(); }
+  STATE.users.push(u);
+  STATE.sessionUserId=u.id;
+  const t={id:uid(),userId:u.id,name:"我的出差",from:"",to:"",startDate:new Date().toISOString().slice(0,10),endDate:"",purpose:"",createdAt:Date.now()};
+  STATE.trips.push(t);
+  STATE.currentTripId=t.id;
+  saveState();
+  if(downgraded) setSyncStatus("");
+}
+async function login(account,pass){
+  account=String(account||"").trim().toLowerCase();
+  if(!account) throw new Error("请输入邮箱或用户名");
+  if(!pass) throw new Error("请输入密码");
+  let su=null;
+  try{ su=await api("POST","/api/salt",{account:account}); }
+  catch(e){
+    const localU=STATE.users.filter(function(x){return x.email===account;})[0];
+    if(localU){
+      const lh=await sha256(localU.salt+"::"+pass);
+      if(lh!==localU.hash) throw new Error("密码不正确");
+      STATE.sessionUserId=localU.id;
+      const first=STATE.trips.filter(function(t){return t.userId===localU.id;})[0];
+      STATE.currentTripId=first?first.id:null;
+      saveState();
+      toast("已登录（本机模式）","当前无法连接云端，数据暂存本机","warn");
+      setSyncStatus("err","离线");
+      return;
+    }
+    throw new Error(e.message||"登录失败");
+  }
+  const hash=await sha256(su.salt+"::"+pass);
+  let r;
+  try{ r=await api("POST","/api/login",{account:account,hash:hash}); }
+  catch(e){ throw new Error(e.message||"密码不正确"); }
+  CLOUD.token=r.token; CLOUD.email=(r.email||account).toLowerCase(); CLOUD.role=r.role||su.role||"user";
+  CLOUD.proxy=null; CLOUD.adminHome=null; CLOUD.uploaded=new Set(); CLOUD.errToasted=false;
+  saveCloudSession();
+  let u=STATE.users.filter(function(x){return x.id===r.userId;})[0];
+  if(!u){ u={id:r.userId,name:r.name,email:CLOUD.email,createdAt:Date.now(),role:CLOUD.role}; STATE.users.push(u); }
+  else{ u.id=r.userId; u.name=r.name; u.role=CLOUD.role; }
+  STATE.sessionUserId=u.id;
+  let cloudData=null, cloudUpdatedAt=0;
+  try{ const d=await api("GET","/api/data"); cloudData=d&&d.data?d.data:null; cloudUpdatedAt=d&&d.updatedAt?d.updatedAt:0; }catch(e){}
+  if(cloudData&&lastLocalWrite<=cloudUpdatedAt){
+    applyCloudData(u.id,cloudData);
+    CLOUD.uploaded=new Set((cloudData.photos||[]).map(function(p){return p.id;}));
+    saveCloudSession();
+    const first=STATE.trips.filter(function(t){return t.userId===u.id;})[0];
+    STATE.currentTripId=first?first.id:null;
+    lastLocalWrite=cloudUpdatedAt||Date.now();
+    try{ LS.setItem("tm_lastwrite",String(lastLocalWrite)); }catch(e){}
+    saveState();
+    hydratePhotos().then(function(h){ if(h) refreshAll(); });
+  }else{
+    const hasLocal=STATE.trips.some(function(t){return t.userId===u.id;});
+    if(!hasLocal){
+      const t={id:uid(),userId:u.id,name:"我的出差",from:"",to:"",startDate:new Date().toISOString().slice(0,10),endDate:"",purpose:"",createdAt:Date.now()};
+      STATE.trips.push(t); STATE.currentTripId=t.id;
+    }else{
+      const first=STATE.trips.filter(function(t){return t.userId===u.id;})[0];
+      STATE.currentTripId=first?first.id:null;
+    }
+    saveState();
+  }
+}
+async function guestLogin(){
+  const email="guest@tripmate.local";
+  let u=STATE.users.filter(function(x){return x.email===email;})[0];
+  if(!u){
+    const salt=uid();
+    u={id:uid(),name:"体验用户",email:email,salt:salt,hash:await sha256(salt+"::guest123"),createdAt:Date.now(),local:true};
+    STATE.users.push(u);
+  }
+  u.local=true;
+  STATE.sessionUserId=u.id;
+  let t=STATE.trips.filter(function(x){return x.userId===u.id;})[0];
+  if(!t){
+    t={id:uid(),userId:u.id,name:"北京客户拜访",from:"上海",to:"北京",startDate:new Date(Date.now()-86400000).toISOString().slice(0,10),endDate:new Date(Date.now()+2*86400000).toISOString().slice(0,10),purpose:"客户方案沟通",createdAt:Date.now()};
+    STATE.trips.push(t);
+    seedDemo(u.id,t.id);
+  }
+  STATE.currentTripId=t.id;
+  CLOUD.proxy=null; $("#proxyBar").hidden=true;
+  saveState();
+}
+function seedDemo(userId,tripId){
+  const now=Date.now();
+  STATE.expenses.push({id:uid(),userId:userId,tripId:tripId,amount:1280,category:"transport",note:"高铁往返票",date:new Date(now-86400000).toISOString().slice(0,10),createdAt:now});
+  STATE.expenses.push({id:uid(),userId:userId,tripId:tripId,amount:640,category:"lodging",note:"酒店两晚",date:new Date(now-86400000).toISOString().slice(0,10),createdAt:now-1000});
+  STATE.expenses.push({id:uid(),userId:userId,tripId:tripId,amount:186,category:"meal",note:"客户餐叙",date:new Date(now).toISOString().slice(0,10),createdAt:now-2000});
+  STATE.locations.push({id:uid(),userId:userId,tripId:tripId,lat:39.9042,lng:116.4074,name:"北京·国贸",note:"客户公司",ts:now-3600000});
+  STATE.reminders.push({id:uid(),userId:userId,tripId:tripId,title:"返程取报销凭证",note:"前台索取发票",dueTs:now+5400000,done:false,notified:false});
+}
+
+/* ================= ticking reminders ================= */
+let tickId=null;
+function startTick(){
+  if(tickId) clearInterval(tickId);
+  tickId=setInterval(checkDue, 30000);
+  checkDue();
+}
+function checkDue(){
+  if(!me()) return;
+  const now=Date.now(); let changed=false;
+  tripSet(STATE.reminders).forEach(function(r){
+    if(!r.done && !r.notified && r.dueTs && r.dueTs<=now){
+      r.notified=true; changed=true;
+      fireReminder(r);
+    }
+  });
+  if(changed){ saveState(); refreshAll(); }
+}
+function fireReminder(r){
+  toast("提醒："+r.title, r.note||fmtDT(r.dueTs), "warn");
+  try{
+    if("Notification" in window && Notification.permission==="granted"){
+      new Notification("出差助手 · "+r.title, { body: (r.note||"")+"\n"+fmtDT(r.dueTs) });
+    }
+  }catch(e){}
+}
+function askNotify(){
+  try{
+    if("Notification" in window){
+      Notification.requestPermission().then(function(){ renderReminder(); });
+    }else{ toast("当前浏览器不支持通知","已使用页面内提醒","warn"); }
+  }catch(e){ toast("无法开启通知","已使用页面内提醒","warn"); }
+}
+
+/* ================= navigation ================= */
+const NAV=[
+  {id:"overview",label:"行程概览",icon:"route"},
+  {id:"expense",label:"开销台账",icon:"wallet"},
+  {id:"location",label:"定位记录",icon:"pin"},
+  {id:"photo",label:"票据照片",icon:"camera"},
+  {id:"reminder",label:"日程提醒",icon:"bell"}
+];
+let currentView="overview";
+function setView(id){
+  currentView=id;
+  $$(".view").forEach(function(v){ v.hidden = v.getAttribute("data-view")!==id; });
+  renderNav();
+  if(id==="overview") renderOverview();
+  if(id==="expense") renderExpense();
+  if(id==="location") renderLocation();
+  if(id==="photo") renderPhoto();
+  if(id==="reminder") renderReminder();
+  if(id==="admin") renderAdmin();
+  const m=$("#mainView"); if(m) m.scrollTop=0;
+}
+function navCounts(){
+  return {
+    expense: tripSet(STATE.expenses).length,
+    location: tripSet(STATE.locations).length,
+    photo: tripSet(STATE.photos).length,
+    reminder: tripSet(STATE.reminders).filter(function(r){return !r.done;}).length,
+    overview: 0
+  };
+}
+function renderNav(){
+  const counts=navCounts();
+  const side=$("#sideNav");
+  const items=NAV.slice();
+  if(isAdmin()||CLOUD.proxy) items.push({id:"admin",label:"用户管理",icon:"user"});
+  let html='<div class="navlist">';
+  items.forEach(function(n){
+    html+='<button class="navitem'+(n.id===currentView?" on":"")+'" data-nav="'+n.id+'"><span data-icon="'+n.icon+'"></span><span>'+n.label+"</span>"+(counts[n.id]?'<span class="count">'+counts[n.id]+"</span>":"")+"</button>";
+  });
+  html+="</div>";
+  html+='<div class="nav-side-label">数据</div><div class="navlist"><button class="navitem" data-act="settings"><span data-icon="settings"></span><span>设置与数据</span></button></div>';
+  side.innerHTML=html;
+  renderIcons(side);
+  const tab=$("#tabBar");
+  let th="";
+  items.forEach(function(n){
+    th+='<button data-nav="'+n.id+'" class="'+(n.id===currentView?"on":"")+'"><span data-icon="'+n.icon+'"></span><span>'+n.label.slice(0,2)+"</span></button>";
+  });
+  tab.innerHTML=th;
+  renderIcons(tab);
+}
+
+/* ================= topbar ================= */
+function renderTopbar(){
+  const u=me(); if(u){ $("#userName").textContent=u.name; $("#userAvatar").textContent=(u.name||"?").slice(0,1); }
+  const t=curTrip();
+  $("#tsName").textContent=t?t.name:"未选择出差";
+  $("#tsMeta").textContent=t?(fmtDate(dayStart(t.startDate))+(t.endDate?(" → "+fmtDate(dayStart(t.endDate))):"")+" · "+tripDays(t)):"点击新建或切换";
+}
+
+/* ================= overview ================= */
+function statCard(lbl,icon,val,unit){
+  return '<div class="stat"><div class="lbl"><span data-icon="'+icon+'"></span>'+lbl+'</div><div class="val">'+val+(unit?'<small> '+unit+"</small>":"")+"</div></div>";
+}
+function renderOverview(){
+  const t=curTrip();
+  const exps=tripSet(STATE.expenses), locs=tripSet(STATE.locations), photos=tripSet(STATE.photos);
+  const rems=tripSet(STATE.reminders).filter(function(r){return !r.done;});
+  const total=exps.reduce(function(s,e){return s+(+e.amount||0);},0);
+  $("#bpKicker").textContent=t&&t.purpose?t.purpose:(t?t.name:"出差行程");
+  $("#bpFrom").textContent=t&&t.from?t.from:"出发地";
+  $("#bpTo").textContent=t&&t.to?t.to:"目的地";
+  $("#bpStart").textContent=t?fmtDate(dayStart(t.startDate)):"—";
+  $("#bpEnd").textContent=t&&t.endDate?fmtDate(dayStart(t.endDate)):"进行中";
+  $("#bpDays").textContent=tripDays(t);
+  $("#stampTotal").textContent=money(total);
+  $("#bpStubMeta").textContent=t?(exps.length+" 笔开销 · "+locs.length+" 个定位点"):"还没有记录";
+  $("#ovLead").textContent=t?(t.name+" · "+tripDays(t)):"先创建一趟出差";
+  const s=$("#statRow");
+  s.innerHTML=statCard("累计开销","wallet",money(total))+
+    statCard("开销笔数","receipt",exps.length,"笔")+
+    statCard("定位点","pin",locs.length,"个")+
+    statCard("待办提醒","bell",rems.length,"条");
+  renderIcons(s);
+  renderTimeline(exps,locs,rems,photos);
+}
+function renderTimeline(exps,locs,rems){
+  const items=[];
+  exps.forEach(function(e){ items.push({ts:e.createdAt||dayStart(e.date)||0,icon:"wallet",title:e.note||catOf(e.category).name,sub:catOf(e.category).name+" · "+fmtDate(e.date||e.createdAt),amount:money(e.amount)}); });
+  locs.forEach(function(l){ items.push({ts:l.ts,icon:"pin",title:l.name||"定位点",sub:l.note||(l.lat!=null?(l.lat.toFixed(4)+", "+l.lng.toFixed(4)):""),amount:""}); });
+  rems.forEach(function(r){ items.push({ts:r.dueTs,icon:"bell",title:r.title,sub:"提醒 · "+fmtDT(r.dueTs),amount:""}); });
+  items.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  const body=$("#timelineBody");
+  $("#tlCount").textContent=items.length+" 条记录";
+  if(!items.length){
+    body.innerHTML='<div class="empty"><div class="eico" data-icon="route"></div><b>还没有行程记录</b><p>从记一笔开销、采集一个定位点或添加照片开始。</p><div class="fab-row" style="justify-content:center"><button class="btn btn-accent btn-sm" data-add="expense"><span data-icon="plus"></span>记一笔开销</button><button class="btn btn-sm" data-add="location"><span data-icon="pin"></span>添加定位</button></div></div>';
+    renderIcons(body); return;
+  }
+  let html='<div class="route">';
+  items.slice(0,12).forEach(function(it){
+    html+='<div class="rnode"><span class="dot"><i></i></span><div class="rhead"><span data-icon="'+it.icon+'" style="color:var(--faint);display:inline-flex"></span><b>'+esc(it.title)+"</b><time>"+esc(fmtDT(it.ts))+"</time>"+(it.amount?'<span class="amount">'+esc(it.amount)+"</span>":"")+'</div><div class="rbody">'+esc(it.sub)+"</div></div>";
+  });
+  html+="</div>";
+  body.innerHTML=html;
+  renderIcons(body);
+}
+
+/* ================= expense ================= */
+function renderExpense(){
+  const exps=tripSet(STATE.expenses).slice().sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
+  const total=exps.reduce(function(s,e){return s+(+e.amount||0);},0);
+  const t=curTrip();
+  const days=t?Math.max(1,(function(){ const s=dayStart(t.startDate)||Date.now(); const e=t.endDate?dayStart(t.endDate):Date.now(); return Math.round((e-s)/86400000)+1; })()):1;
+  let max=0; exps.forEach(function(e){ if(+e.amount>max) max=+e.amount; });
+  const s=$("#expStatRow");
+  s.innerHTML=statCard("累计开销","wallet",money(total))+
+    statCard("笔数","receipt",exps.length,"笔")+
+    statCard("日均","calendar",money(total/days))+
+    statCard("最大单笔","tag",money(max));
+  renderIcons(s);
+  const byCat={}; CATS.forEach(function(c){ byCat[c.id]=0; });
+  exps.forEach(function(e){ byCat[e.category]=(byCat[e.category]||0)+(+e.amount||0); });
+  const cb=$("#catBreakdown");
+  if(total<=0){ cb.innerHTML='<div class="empty" style="padding:22px"><b>暂无开销</b><p>记录第一笔开支后，这里会显示分类占比。</p></div>'; }
+  else{
+    let bar='<div class="catbar">', lg='<div class="legend">';
+    CATS.forEach(function(c){ const v=byCat[c.id]||0; if(v>0){ bar+='<i style="width:'+((v/total)*100)+'%;background:'+c.color+'" title="'+c.name+'"></i>'; } lg+='<span><span class="sw" style="background:'+c.color+'"></span>'+c.name+" "+money(v)+" · "+Math.round((v/total)*100)+"%</span>"; });
+    bar+="</div>"; lg+="</div>";
+    cb.innerHTML=bar+lg;
+  }
+  $("#expCount").textContent=exps.length+" 笔";
+  const list=$("#expList");
+  if(!exps.length){
+    list.innerHTML='<div class="empty"><div class="eico" data-icon="wallet"></div><b>还没有开销记录</b><p>点击右上角「记一笔开销」开始记账。</p><button class="btn btn-accent btn-sm" data-add="expense"><span data-icon="plus"></span>记一笔开销</button></div>';
+    renderIcons(list); return;
+  }
+  let html="";
+  const editables=canEdit();
+  exps.forEach(function(e){
+    const c=catOf(e.category);
+    html+='<div class="row"><span class="ico" style="background:'+c.color+'1a;color:'+c.color+'"><span data-icon="wallet"></span></span><div class="meta"><b>'+esc(e.note||c.name)+"</b><span>"+esc(c.name)+" · "+esc(fmtDate(e.date||e.createdAt))+'</span></div><div class="right"><span class="money">'+esc(money(e.amount))+'</span>'+(editables?'<button class="iconbtn" data-edit-exp="'+e.id+'" title="编辑" data-icon="edit"></button><button class="iconbtn" data-del-exp="'+e.id+'" title="删除" data-icon="trash"></button>':'')+'</div></div>';
+  });
+  list.innerHTML=html;
+  renderIcons(list);
+}
+
+/* ================= location ================= */
+function renderLocation(){
+  const locs=tripSet(STATE.locations).slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  const list=$("#locList");
+  if(!locs.length){
+    list.innerHTML='<div class="empty"><div class="eico" data-icon="pin"></div><b>还没有定位记录</b><p>点击「采集当前位置」记录到访地点，或手动输入地点。</p><div class="fab-row" style="justify-content:center"><button class="btn btn-accent btn-sm" id="locCaptureBtn2"><span data-icon="nav"></span>采集当前位置</button></div></div>';
+    const b=$("#locCaptureBtn2"); if(b) b.addEventListener("click",captureLocation);
+    renderIcons(list); return;
+  }
+  let html="";
+  const canDelLoc=canEdit();
+  locs.forEach(function(l){
+    const coord=(l.lat!=null&&l.lng!=null)?(l.lat.toFixed(5)+", "+l.lng.toFixed(5)):"无坐标";
+    const mapBtn=(l.lat!=null&&l.lng!=null)?('<button class="btn btn-ghost btn-sm" data-map-loc="'+l.id+'"><span data-icon="map"></span>地图</button>'):"";
+    html+='<div class="row"><span class="ico"><span data-icon="pin"></span></span><div class="meta"><b>'+esc(l.name||"未命名地点")+"</b><span>"+esc(coord)+(l.note?(" · "+esc(l.note)):"")+'</span><span style="display:block;font-size:12px;color:var(--faint)">'+esc(fmtDT(l.ts))+'</span></div><div class="right">'+mapBtn+(canDelLoc?'<button class="iconbtn" data-del-loc="'+l.id+'" title="删除" data-icon="trash"></button>':'')+'</div></div>';
+  });
+  list.innerHTML=html;
+  renderIcons(list);
+}
+function captureLocation(){
+  if(!curTrip()){ toast("请先创建出差","新建一趟出差后再记录定位","warn"); return; }
+  if(!("geolocation" in navigator)){ toast("无法定位","当前浏览器不支持定位，请手动添加","warn"); openLocationModal(); return; }
+  const deniedHint=function(){
+    toast("定位权限未开启","请点浏览器地址栏左侧的锁形图标 → 位置 → 允许，然后重试；也可以直接手动填写地点","warn");
+    openLocationModal();
+  };
+  const failHint=function(msg){
+    toast("定位失败","已切换为手动输入"+(msg?("（"+msg+"）"):""),"warn");
+    openLocationModal();
+  };
+  const askGeo=function(){
+    toast("正在获取定位…","如浏览器弹出位置授权，请选择“允许”","warn");
+    navigator.geolocation.getCurrentPosition(function(pos){
+      openLocationModal(pos.coords.latitude,pos.coords.longitude);
+    },function(err){
+      if(err&&err.code===1){ deniedHint(); }
+      else{ failHint(err&&err.message?err.message:""); }
+    },{ enableHighAccuracy:true, timeout:8000, maximumAge:30000 });
+  };
+  if(navigator.permissions&&navigator.permissions.query){
+    navigator.permissions.query({name:"geolocation"}).then(function(p){
+      if(p.state==="denied"){ deniedHint(); }else{ askGeo(); }
+    }).catch(function(){ askGeo(); });
+  }else{ askGeo(); }
+}
+function openLocationModal(lat,lng){
+  const body='<div class="field"><label>地点名称</label><input class="input" id="locName" placeholder="如：北京·国贸" value=""></div>'
+    +'<div class="grid2"><div class="field"><label>纬度</label><input class="input" id="locLat" placeholder="39.9042" value="'+(lat!=null?lat:"")+'"></div>'
+    +'<div class="field"><label>经度</label><input class="input" id="locLng" placeholder="116.4074" value="'+(lng!=null?lng:"")+'"></div></div>'
+    +'<div class="field"><label>备注 <span class="hint">可选</span></label><input class="input" id="locNote" placeholder="如：客户公司 / 车站"></div>';
+  const foot='<button class="btn" data-close>取消</button><button class="btn btn-accent" id="locSave" data-icon="check">保存定位</button>';
+  const scrim=openModal({title:"添加定位",body:body,foot:foot,onMount:function(root){
+    root.querySelector("#locSave").addEventListener("click",function(){
+      const name=$("#locName",root).value.trim();
+      const la=parseFloat($("#locLat",root).value), ln=parseFloat($("#locLng",root).value);
+      const note=$("#locNote",root).value.trim();
+      if(!name && isNaN(la)){ toast("请填写地点信息","名称或坐标至少填一项","err"); return; }
+      STATE.locations.push({id:uid(),userId:STATE.sessionUserId,tripId:STATE.currentTripId,name:name||(isNaN(la)?"手动定位":(la.toFixed(4)+", "+ln.toFixed(4))),lat:isNaN(la)?null:la,lng:isNaN(ln)?null:ln,note:note,ts:Date.now()});
+      saveState(); closeModal(); refreshAll(); toast("定位已记录",name||"已保存坐标");
+    });
+  }});
+  renderIcons(scrim);
+}
+
+/* ================= photo ================= */
+function renderPhoto(){
+  const photos=tripSet(STATE.photos).slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  const grid=$("#photoGrid");
+  if(!photos.length){
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="eico" data-icon="camera"></div><b>还没有照片</b><p>拍照或选择图片作为票据凭证，压缩后自动云端同步。</p><button class="btn btn-accent btn-sm" data-add="photo"><span data-icon="camera"></span>添加照片</button></div>';
+    renderIcons(grid); return;
+  }
+  let html="";
+  const canDelPhoto=canEdit();
+  photos.forEach(function(p){
+    html+='<div class="pcard"><img src="'+(p.dataUrl||"")+'" alt="'+esc(p.name||"票据照片")+'" data-view-photo="'+p.id+'"><div class="pcap"><div class="pm"><b>'+esc(p.name||"票据照片")+"</b><span>"+esc(fmtDate(p.ts))+'</span></div>'+(canDelPhoto?'<button class="iconbtn" data-del-photo="'+p.id+'" title="删除" data-icon="trash"></button>':'')+'</div></div>';
+  });
+  grid.innerHTML=html;
+  renderIcons(grid);
+  if(photos.some(function(p){ return !p.dataUrl; })){
+    hydratePhotos().then(function(changed){ if(changed&&currentView==="photo") renderPhoto(); });
+  }
+}
+const MAX_PHOTOS=40;
+function pickPhoto(){
+  if(!curTrip()){ toast("请先创建出差","新建一趟出差后再添加照片","warn"); return; }
+  if(tripSet(STATE.photos).length>=MAX_PHOTOS){ toast("照片数量已达上限","最多 "+MAX_PHOTOS+" 张，可先删除部分","warn"); return; }
+  const input=document.createElement("input");
+  input.type="file"; input.accept="image/*"; input.setAttribute("capture","environment"); input.multiple=true;
+  input.addEventListener("change",async function(){
+    const files=Array.prototype.slice.call(input.files||[]);
+    if(!files.length) return;
+    let added=0;
+    for(let i=0;i<files.length;i++){
+      try{
+        const dataUrl=await compressImage(files[i]);
+        STATE.photos.push({id:uid(),userId:STATE.sessionUserId,tripId:STATE.currentTripId,name:(files[i].name||"照片").replace(/\.[a-z0-9]+$/i,""),dataUrl:dataUrl,ts:Date.now()});
+        added++;
+      }catch(e){ toast("有一张图片处理失败","请尝试其他图片","err"); }
+      if(tripSet(STATE.photos).length>=MAX_PHOTOS) break;
+    }
+    if(added){ saveState(); refreshAll(); toast("已添加 "+added+" 张照片","将自动同步到云端"); }
+  });
+  input.click();
+}
+function compressImage(file,maxDim,quality){
+  maxDim=maxDim||1280; quality=quality||0.72;
+  return new Promise(function(resolve,reject){
+    const reader=new FileReader();
+    reader.onload=function(){
+      const img=new Image();
+      img.onload=function(){
+        let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+        const scale=Math.min(1, maxDim/Math.max(w,h));
+        w=Math.max(1,Math.round(w*scale)); h=Math.max(1,Math.round(h*scale));
+        const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+        const ctx=cv.getContext("2d");
+        ctx.drawImage(img,0,0,w,h);
+        try{ resolve(cv.toDataURL("image/jpeg",quality)); }catch(e){ resolve(reader.result); }
+      };
+      img.onerror=function(){ reject(new Error("decode")); };
+      img.src=reader.result;
+    };
+    reader.onerror=function(){ reject(new Error("read")); };
+    reader.readAsDataURL(file);
+  });
+}
+function viewPhoto(id){
+  const p=STATE.photos.filter(function(x){return x.id===id;})[0]; if(!p) return;
+  const show=function(){
+    if(!p.dataUrl){
+      openModal({title:p.name||"票据照片",body:'<p style="color:var(--muted);font-size:13.5px">照片正在从云端加载，请稍候…</p>',foot:'<button class="btn" data-close>关闭</button>'});
+      return;
+    }
+    openModal({title:p.name||"票据照片",body:'<img src="'+p.dataUrl+'" alt="票据照片" style="width:100%;border-radius:11px;border:1px solid var(--line)"><p style="font-size:12.5px;color:var(--muted);margin-top:10px">'+esc(fmtDT(p.ts))+"</p>",foot:(canEdit()?'<button class="btn" data-close>关闭</button><button class="btn btn-danger" id="pvDel" data-icon="trash">删除</button>':'<button class="btn" data-close>关闭</button>'),onMount:function(root){ const del=root.querySelector("#pvDel"); if(del) del.addEventListener("click",function(){ deletePhoto(id); closeModal(); }); }});
+  };
+  if(!p.dataUrl){ hydratePhotos().then(show); } else { show(); }
+}
+
+/* ================= reminder ================= */
+function renderReminder(){
+  const rems=tripSet(STATE.reminders);
+  const up=rems.filter(function(r){return !r.done;}).sort(function(a,b){ return (a.dueTs||0)-(b.dueTs||0); });
+  const past=rems.filter(function(r){return r.done;}).sort(function(a,b){ return (b.dueTs||0)-(a.dueTs||0); });
+  const note=$("#notifNote");
+  let np="";
+  try{ np=("Notification" in window)?Notification.permission:"unsupported"; }catch(e){ np="unsupported"; }
+  if(np!=="granted"){
+    note.innerHTML='<span data-icon="bell"></span><div>开启桌面通知，到点即使不盯着页面也能收到提醒（需允许权限）。<div style="margin-top:10px"><button class="btn btn-sm'+(np==="unsupported"?"":" btn-accent")+'" id="notifyBtn">'+("开启浏览器通知")+'</button></div></div>';
+  }else{
+    note.innerHTML='<span data-icon="check"></span><div>桌面通知已开启，到达设定时间会弹出提醒。</div>';
+  }
+  renderIcons(note);
+  $("#remUpCount").textContent=up.length+" 条待办";
+  const ul=$("#remUpList");
+  if(!up.length){ ul.innerHTML='<div class="empty" style="padding:26px"><div class="eico" data-icon="bell"></div><b>没有待办提醒</b><p>添加提醒，出差途中不再遗漏重要事项。</p><button class="btn btn-accent btn-sm" data-add="reminder"><span data-icon="plus"></span>添加提醒</button></div>'; renderIcons(ul); }
+  else{
+    let h="";
+    const canEditRem=canEdit();
+    up.forEach(function(r){
+      const soon=r.dueTs<=Date.now();
+      h+='<div class="row"><span class="ico'+(soon?"":" mut")+'"'+(soon?' style="background:var(--warn-soft);color:var(--warn)"':"")+'><span data-icon="clock"></span></span><div class="meta"><b>'+esc(r.title)+"</b><span>"+esc(fmtDT(r.dueTs))+" · "+(soon?'<span style="color:var(--warn);font-weight:700">已到时间</span>':esc(relDay(r.dueTs)))+(r.note?(" · "+esc(r.note)):"")+'</span></div><div class="right">'+(canEditRem?'<button class="iconbtn" data-done-rem="'+r.id+'" title="标记完成" data-icon="check"></button><button class="iconbtn" data-del-rem="'+r.id+'" title="删除" data-icon="trash"></button>':'')+'</div></div>';
+    });
+    ul.innerHTML=h; renderIcons(ul);
+  }
+  const pl=$("#remPastList");
+  if(!past.length){ pl.innerHTML='<div style="padding:18px;color:var(--muted);font-size:13px">暂无已完成或已过期的提醒。</div>'; }
+  else{
+    let h="";
+    const canEditRem=canEdit();
+    past.forEach(function(r){
+      h+='<div class="row" style="opacity:.7"><span class="ico mut"><span data-icon="check"></span></span><div class="meta"><b style="text-decoration:line-through">'+esc(r.title)+"</b><span>"+esc(fmtDT(r.dueTs))+'</span></div><div class="right">'+(canEditRem?'<button class="iconbtn" data-del-rem="'+r.id+'" title="删除" data-icon="trash"></button>':'')+'</div></div>';
+    });
+    pl.innerHTML=h; renderIcons(pl);
+  }
+}
+
+/* ================= add modals ================= */
+function openExpenseModal(editId){
+  if(!curTrip()){ toast("请先创建出差","新建一趟出差后再记账","warn"); return; }
+  const e=editId?STATE.expenses.filter(function(x){return x.id===editId;})[0]:null;
+  const today=new Date().toISOString().slice(0,10);
+  let chips=CATS.map(function(c){ const on=e&&e.category===c.id; return '<button type="button" class="chip'+(on?" on":"")+'" data-cat="'+c.id+'">'+c.name+"</button>"; }).join("");
+  const body='<div class="field"><label>金额</label><input class="input" id="exAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" value="'+(e?e.amount:"")+'"></div>'
+    +'<div class="field"><label>分类</label><div class="chips" id="exCats">'+chips+"</div></div>"
+    +'<div class="field"><label>说明</label><input class="input" id="exNote" placeholder="如：高铁票 / 酒店 / 客户餐叙" value="'+(e?esc(e.note||""):"")+'"></div>'
+    +'<div class="field"><label>日期</label><input class="input" id="exDate" type="date" value="'+(e?(e.date||today):today)+'"></div>';
+  const foot='<button class="btn" data-close>取消</button><button class="btn btn-accent" id="exSave" data-icon="check">保存</button>';
+  let chosen=e?e.category:"transport";
+  const scrim=openModal({title:editId?"编辑开销":"记一笔开销",body:body,foot:foot,onMount:function(root){
+    const cats=$("#exCats",root);
+    cats.addEventListener("click",function(ev){ const b=ev.target.closest("[data-cat]"); if(!b) return; chosen=b.getAttribute("data-cat"); $$(".chip",cats).forEach(function(c){ c.classList.toggle("on", c===b); }); });
+    root.querySelector("#exSave").addEventListener("click",function(){
+      const amt=parseFloat($("#exAmt",root).value);
+      if(isNaN(amt)||amt<=0){ toast("请输入有效金额","金额需大于 0","err"); return; }
+      const note=$("#exNote",root).value.trim(), date=$("#exDate",root).value||today;
+      if(e){ e.amount=amt; e.category=chosen; e.note=note; e.date=date; }
+      else{ STATE.expenses.push({id:uid(),userId:STATE.sessionUserId,tripId:STATE.currentTripId,amount:amt,category:chosen,note:note,date:date,createdAt:Date.now()}); }
+      saveState(); closeModal(); refreshAll(); toast(editId?"开销已更新":"已记录开销",money(amt));
+    });
+  }});
+  renderIcons(scrim);
+}
+function openReminderModal(editId){
+  if(!curTrip()){ toast("请先创建出差","新建一趟出差后再添加提醒","warn"); return; }
+  const r=editId?STATE.reminders.filter(function(x){return x.id===editId;})[0]:null;
+  const dl=r?toLocalInput(r.dueTs):toLocalInput(Date.now()+3600000);
+  const body='<div class="field"><label>提醒内容</label><input class="input" id="rmTitle" placeholder="如：返程取报销凭证" value="'+(r?esc(r.title):"")+'"></div>'
+    +'<div class="field"><label>提醒时间</label><input class="input" id="rmTime" type="datetime-local" value="'+dl+'"></div>'
+    +'<div class="field"><label>备注 <span class="hint">可选</span></label><input class="input" id="rmNote" placeholder="补充说明" value="'+(r?esc(r.note||""):"")+'"></div>';
+  const foot='<button class="btn" data-close>取消</button><button class="btn btn-accent" id="rmSave" data-icon="check">保存提醒</button>';
+  const scrim=openModal({title:editId?"编辑提醒":"添加提醒",body:body,foot:foot,onMount:function(root){
+    root.querySelector("#rmSave").addEventListener("click",function(){
+      const title=$("#rmTitle",root).value.trim();
+      if(!title){ toast("请输入提醒内容","","err"); return; }
+      const ts=$("#rmTime",root).value?new Date($("#rmTime",root).value).getTime():Date.now();
+      const note=$("#rmNote",root).value.trim();
+      if(r){ r.title=title; r.dueTs=ts; r.note=note; r.notified=false; }
+      else{ STATE.reminders.push({id:uid(),userId:STATE.sessionUserId,tripId:STATE.currentTripId,title:title,note:note,dueTs:ts,done:false,notified:false}); }
+      saveState(); closeModal(); refreshAll(); toast(editId?"提醒已更新":"提醒已添加",fmtDT(ts));
+    });
+  }});
+  renderIcons(scrim);
+}
+function toLocalInput(ts){ const d=new Date(ts); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes()); }
+
+/* ================= trip modal ================= */
+function openTripModal(editId){
+  const t=editId?STATE.trips.filter(function(x){return x.id===editId;})[0]:null;
+  const today=new Date().toISOString().slice(0,10);
+  const body='<div class="field"><label>出差名称</label><input class="input" id="trName" placeholder="如：北京客户拜访" value="'+(t?esc(t.name):"")+'"></div>'
+    +'<div class="grid2"><div class="field"><label>出发地</label><input class="input" id="trFrom" placeholder="上海" value="'+(t?esc(t.from||""):"")+'"></div>'
+    +'<div class="field"><label>目的地</label><input class="input" id="trTo" placeholder="北京" value="'+(t?esc(t.to||""):"")+'"></div></div>'
+    +'<div class="grid2"><div class="field"><label>出发日期</label><input class="input" id="trStart" type="date" value="'+(t?(t.startDate||today):today)+'"></div>'
+    +'<div class="field"><label>返程日期 <span class="hint">可选</span></label><input class="input" id="trEnd" type="date" value="'+(t?(t.endDate||""):"")+'"></div></div>'
+    +'<div class="field"><label>出差目的 <span class="hint">可选</span></label><input class="input" id="trPurpose" placeholder="如：客户方案沟通" value="'+(t?esc(t.purpose||""):"")+'"></div>';
+  const foot='<button class="btn" data-close>取消</button><button class="btn btn-accent" id="trSave" data-icon="check">保存</button>';
+  const scrim=openModal({title:editId?"编辑出差":"新建出差",body:body,foot:foot,onMount:function(root){
+    root.querySelector("#trSave").addEventListener("click",function(){
+      const name=$("#trName",root).value.trim()||"我的出差";
+      const obj={name:name,from:$("#trFrom",root).value.trim(),to:$("#trTo",root).value.trim(),startDate:$("#trStart",root).value||today,endDate:$("#trEnd",root).value||"",purpose:$("#trPurpose",root).value.trim()};
+      if(t){ Object.keys(obj).forEach(function(k){ t[k]=obj[k]; }); }
+      else{ const nt={id:uid(),userId:STATE.sessionUserId,createdAt:Date.now()}; Object.keys(obj).forEach(function(k){ nt[k]=obj[k]; }); STATE.trips.push(nt); STATE.currentTripId=nt.id; }
+      saveState(); closeModal(); refreshAll(); toast(editId?"出差已更新":"已新建出差",name);
+    });
+  }});
+  renderIcons(scrim);
+}
+function tripSwitchMenu(anchor){
+  const trips=myTrips();
+  let h='<div class="mhead"><b>切换出差</b><span>'+trips.length+" 趟行程</span></div>";
+  trips.forEach(function(t){
+    h+='<button class="trip-opt" data-pick-trip="'+t.id+'"><span data-icon="pin"></span>'+esc(t.name)+'<span class="to-meta">'+esc(fmtDate(dayStart(t.startDate)))+"</span></button>";
+  });
+  h+='<div class="sep"></div><button data-new-trip="1"><span data-icon="plus"></span>新建出差</button>';
+  if(curTrip()&&canEdit()) h+='<button data-edit-trip="1"><span data-icon="edit"></span>编辑当前出差</button>';
+  h+='<div class="sep"></div><button data-act="export"><span data-icon="download"></span>导出归档文档</button>';
+  h+='<button data-act="settings"><span data-icon="settings"></span>设置与数据</button>';
+  const menu=document.createElement("div");
+  menu.className="menu";
+  menu.innerHTML=h;
+  document.body.appendChild(menu);
+  renderIcons(menu);
+  const r=anchor.getBoundingClientRect();
+  menu.style.top=(r.bottom+8)+"px";
+  menu.style.left=Math.min(r.left, window.innerWidth-244)+"px";
+  menu.style.position="fixed";
+  function close(){ menu.remove(); document.removeEventListener("click",onDoc,true); }
+  function onDoc(ev){ if(!menu.contains(ev.target)&&!anchor.contains(ev.target)) close(); }
+  setTimeout(function(){ document.addEventListener("click",onDoc,true); },0);
+  menu.addEventListener("click",function(ev){
+    const b=ev.target.closest("[data-pick-trip],[data-new-trip],[data-edit-trip],[data-act]"); if(!b){ return; }
+    if(b.hasAttribute("data-pick-trip")){ STATE.currentTripId=b.getAttribute("data-pick-trip"); saveState(); close(); refreshAll(); toast("已切换出差",curTrip()?curTrip().name:""); }
+    else if(b.hasAttribute("data-new-trip")){ close(); openTripModal(); }
+    else if(b.hasAttribute("data-edit-trip")){ close(); openTripModal(STATE.currentTripId); }
+    else if(b.getAttribute("data-act")==="export"){ close(); openExportModal("self"); }
+    else if(b.getAttribute("data-act")==="settings"){ close(); openSettings(); }
+  });
+}
+function userMenu(anchor){
+  const u=me();
+  let h='<div class="mhead"><b>'+esc(u?u.name:"用户")+"</b><span>"+esc(u?u.email:"")+"</span></div>";
+  h+='<div class="sep"></div><button data-act="export"><span data-icon="download"></span>导出归档文档</button>';
+  h+='<button data-act="settings"><span data-icon="settings"></span>设置与数据</button>';
+  h+='<div class="sep"></div><button data-act="logout"><span data-icon="logout"></span>退出登录</button>';
+  const menu=document.createElement("div");
+  menu.className="menu"; menu.innerHTML=h;
+  document.body.appendChild(menu); renderIcons(menu);
+  const r=anchor.getBoundingClientRect();
+  menu.style.top=(r.bottom+8)+"px"; menu.style.right=Math.max(12, window.innerWidth-r.right)+"px"; menu.style.position="fixed";
+  function close(){ menu.remove(); document.removeEventListener("click",onDoc,true); }
+  function onDoc(ev){ if(!menu.contains(ev.target)&&!anchor.contains(ev.target)) close(); }
+  setTimeout(function(){ document.addEventListener("click",onDoc,true); },0);
+  menu.addEventListener("click",function(ev){
+    const b=ev.target.closest("[data-act]"); if(!b) return; const a=b.getAttribute("data-act"); close();
+    if(a==="settings") openSettings();
+    if(a==="export") openExportModal("self");
+    if(a==="logout") logout();
+  });
+}
+function logout(){
+  STATE.sessionUserId=null; STATE.currentTripId=null; saveState();
+  CLOUD.token=null; CLOUD.email=null; CLOUD.role=null; CLOUD.proxy=null; CLOUD.adminHome=null; CLOUD.uploaded=new Set();
+  saveCloudSession();
+  $("#proxyBar").hidden=true;
+  if(cloudTimer){ clearTimeout(cloudTimer); cloudTimer=null; } cloudDirty=false;
+  setSyncStatus("");
+  if(tickId){ clearInterval(tickId); tickId=null; }
+  showAuth(); toast("已退出登录","");
+}
+
+/* ================= settings & data ================= */
+function exportData(){
+  try{
+    const payload={app:"TripMate", exportedAt:new Date().toISOString(), user:me(), trips:myTrips(), expenses:mine(STATE.expenses), locations:mine(STATE.locations), photos:mine(STATE.photos), reminders:mine(STATE.reminders)};
+    const text=JSON.stringify(payload,null,2);
+    const blob=new Blob([text],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="tripmate-export.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); },1500);
+    toast("已导出数据","文件 tripmate-export.json");
+  }catch(e){ toast("导出失败","可改用云同步备份","err"); }
+}
+function openSettings(){
+  const u=me();
+  const body='<div class="field"><label>账号</label><input class="input" value="'+esc((u?u.name+(u.email?" · "+u.email:""):"")+(CLOUD.proxy?"（管理员代管中）":""))+'" readonly></div>'
+    +'<h4 style="font-size:14px;margin:6px 0 8px">存储与同步</h4>'
+    +'<div class="note"><span data-icon="cloud"></span><div>'+(syncActive()?"数据已自动同步到云端：同一账号在手机、电脑登录即可看到同一份记录，修改实时同步。":CLOUD.proxy?"管理员代管模式：修改将实时同步到该用户的云端数据。":"当前为本地模式（体验账号或离线），数据仅保存在本机浏览器。")+"</div></div>"
+    +(isAdmin()?'<div class="note" style="margin-top:8px"><span data-icon="user"></span><div>管理员：点击左侧「用户管理」可创建账号、分配权限、修改任何用户的数据并批量导出归档。</div></div>':"")
+    +'<h4 style="font-size:14px;margin:16px 0 8px">备份</h4>'
+    +'<div class="fab-row"><button class="btn btn-sm" id="stExport" data-icon="download">导出 JSON</button><button class="btn btn-sm" id="stImport" data-icon="upload">导入 JSON</button></div>'
+    +'<div class="help"><h4>归档导出</h4><ol><li>点击顶栏「下载」图标或用户菜单「导出归档文档」，可导出 Word / Excel / PDF / CSV。</li><li>文档含行程信息、开销汇总与明细、定位坐标与点位名称、待办提醒、票据照片。</li><li>管理员可按用户、按出差条目筛选，批量导出全部用户的归档。</li></ol></div>';
+  const foot='<button class="btn" data-close>关闭</button>';
+  const scrim=openModal({title:"设置与数据",body:body,foot:foot,onMount:function(root){
+    root.querySelector("#stExport").addEventListener("click",exportData);
+    root.querySelector("#stImport").addEventListener("click",function(){ importData(); });
+  }});
+  renderIcons(scrim);
+}
+function importData(){
+  const input=document.createElement("input"); input.type="file"; input.accept="application/json,.json";
+  input.addEventListener("change",function(){
+    const f=input.files&&input.files[0]; if(!f) return;
+    const reader=new FileReader();
+    reader.onload=function(){
+      try{
+        const d=JSON.parse(reader.result);
+        if(!d||!Array.isArray(d.trips)) throw new Error("bad");
+        const keep=STATE.sessionUserId;
+        d.trips.forEach(function(t){ t.userId=keep; STATE.trips.push(t); });
+        (d.expenses||[]).forEach(function(x){ x.userId=keep; STATE.expenses.push(x); });
+        (d.locations||[]).forEach(function(x){ x.userId=keep; STATE.locations.push(x); });
+        (d.photos||[]).forEach(function(x){ x.userId=keep; STATE.photos.push(x); });
+        (d.reminders||[]).forEach(function(x){ x.userId=keep; STATE.reminders.push(x); });
+        if(!curTrip()&&d.trips[0]) STATE.currentTripId=d.trips[0].id;
+        saveState(); refreshAll(); toast("数据已导入","已合并到当前账号");
+      }catch(e){ toast("导入失败","文件格式不正确","err"); }
+    };
+    reader.onerror=function(){ toast("导入失败","无法读取文件","err"); };
+    reader.readAsText(f);
+  });
+  input.click();
+}
+
+/* ================= map modal（地图点位） ================= */
+function osmLink(l){
+  if(!l||l.lat==null||l.lng==null) return "";
+  return "https://www.openstreetmap.org/?mlat="+encodeURIComponent(l.lat)+"&mlon="+encodeURIComponent(l.lng)+"#map=16/"+encodeURIComponent(l.lat)+"/"+encodeURIComponent(l.lng);
+}
+function openMapModal(locId){
+  const l=STATE.locations.filter(function(x){return x.id===locId;})[0]; if(!l) return;
+  if(l.lat==null||l.lng==null){ toast("该地点没有坐标","手动添加且未填坐标，无地图点位","warn"); return; }
+  const lat=l.lat, lng=l.lng, dLng=0.010, dLat=0.006;
+  const embed="https://www.openstreetmap.org/export/embed.html?bbox="+(lng-dLng)+","+(lat-dLat)+","+(lng+dLng)+","+(lat+dLat)+"&layer=mapnik&marker="+encodeURIComponent(lat)+","+encodeURIComponent(lng);
+  openModal({title:l.name||"地图位置",
+    body:'<iframe class="mapframe" src="'+embed+'" loading="lazy" title="地图点位"></iframe><p style="font-size:12.5px;color:var(--muted);margin-top:10px">点位名称：<b style="color:var(--ink)">'+esc(l.name||"未命名")+'</b> · 坐标 '+lat.toFixed(6)+", "+lng.toFixed(6)+(l.note?(" · "+esc(l.note)):"")+"</p>",
+    foot:'<a class="btn" target="_blank" rel="noopener" href="'+osmLink(l)+'">打开大地图</a><button class="btn" data-close>关闭</button>'});
+}
+
+/* ================= admin（管理员后台） ================= */
+async function renderAdmin(){
+  const wrap=$("#adminUserTable"); if(!wrap) return;
+  if(!isAdmin()&&!CLOUD.proxy){ wrap.innerHTML='<div style="padding:14px;color:var(--danger);font-size:13px">需要管理员权限。</div>'; return; }
+  wrap.innerHTML='<div style="padding:18px;color:var(--muted);font-size:13px">正在加载用户列表…</div>';
+  let users=[];
+  try{ const r=await api("GET","/api/admin/users"); users=r.users||[]; ADMIN_CACHE=users; }
+  catch(e){ wrap.innerHTML='<div style="padding:14px;color:var(--danger);font-size:13px">加载失败：'+esc(e.message)+'</div>'; return; }
+  if(!users.length){ wrap.innerHTML='<div class="empty" style="padding:26px"><b>还没有用户</b><p>点击右上角「新建用户」创建账号。</p></div>'; return; }
+  let h='<table class="atable"><thead><tr><th>用户</th><th>登录账号</th><th>角色</th><th>出差/开销/定位/照片/提醒</th><th>最近同步</th><th style="width:300px">操作</th></tr></thead><tbody>';
+  users.forEach(function(u){
+    const c=u.counts;
+    h+='<tr><td><b>'+esc(u.name)+"</b></td><td>"+esc(u.username||u.email)+'</td><td><span class="role-tag '+u.role+'">'+(u.role==="admin"?"管理员":"普通用户")+"</span></td><td>"+(c?(c.trips+" / "+c.expenses+" / "+c.locations+" / "+c.photos+" / "+c.reminders):'<span style="color:var(--faint)">暂无数据</span>')+"</td><td>"+(u.updatedAt?esc(fmtDT(u.updatedAt)):"—")+"</td><td>"
+      +'<button class="btn btn-ghost btn-sm" data-admin-open="'+u.id+'">查看/修改数据</button> '
+      +'<button class="btn btn-ghost btn-sm" data-admin-export="'+u.id+'">导出</button> '
+      +'<button class="btn btn-ghost btn-sm" data-admin-edit="'+u.id+'">编辑</button> '
+      +'<button class="btn btn-ghost btn-sm" data-admin-del="'+u.id+'">删除</button></td></tr>';
+  });
+  h+="</tbody></table>";
+  wrap.innerHTML=h;
+}
+function openAdminUserModal(editId){
+  const u=editId?ADMIN_CACHE.filter(function(x){return x.id===editId;})[0]:null;
+  const body='<div class="field"><label>昵称</label><input class="input" id="auName" placeholder="显示的名字" value="'+(u?esc(u.name):"")+'"></div>'
+    +(u
+      ?'<div class="field"><label>登录账号</label><input class="input" value="'+esc(u.username||u.email)+"\" readonly></div>"
+      :'<div class="grid2"><div class="field"><label>邮箱 <span class="hint">与用户名至少填一项</span></label><input class="input" id="auEmail" placeholder="name@company.com"></div><div class="field"><label>用户名 <span class="hint">选填</span></label><input class="input" id="auUsername" placeholder="如 zhangsan"></div></div>')
+    +'<div class="field"><label>角色</label><select class="input" id="auRole"><option value="user"'+(!u||u.role!=="admin"?" selected":"")+'>普通用户（只能录入，不能修改）</option><option value="admin"'+(u&&u.role==="admin"?" selected":"")+'>管理员（可修改全部数据、管理用户）</option></select></div>'
+    +'<div class="field"><label>'+(u?"重置密码 <span class=\"hint\">留空则不修改</span>":"初始密码 <span class=\"hint\">至少 8 位</span>")+"</label>"+'<input class="input" id="auPass" type="text" placeholder="'+(u?"留空表示不修改":"至少 8 位")+'"></div>';
+  openModal({title:u?"编辑用户":"新建用户",body:body,
+    foot:'<button class="btn" data-close>取消</button><button class="btn btn-accent" id="auSave" data-icon="check">'+(u?"保存修改":"创建用户")+"</button>",
+    onMount:function(root){
+      root.querySelector("#auSave").addEventListener("click",async function(){
+        const name=$("#auName",root).value.trim();
+        const role=$("#auRole",root).value;
+        const pass=$("#auPass",root).value;
+        try{
+          if(u){
+            await api("PUT","/api/admin/users/"+u.id,{name:name,role:role,password:pass||undefined});
+            toast("已保存修改",name);
+          }else{
+            const email=$("#auEmail",root).value.trim();
+            const username=$("#auUsername",root).value.trim().toLowerCase();
+            if(!email&&!username){ toast("请填写邮箱或用户名","","err"); return; }
+            if(!pass||pass.length<8){ toast("初始密码至少 8 位","","err"); return; }
+            await api("POST","/api/admin/users",{name:name,email:email,username:username,role:role,password:pass});
+            toast("已创建用户",(name||username||email)+" · "+(role==="admin"?"管理员":"普通用户"));
+          }
+          closeModal(); renderAdmin();
+        }catch(e){ toast("操作失败",e.message,"err"); }
+      });
+    }});
+}
+function openAdminDeleteUser(id){
+  const u=ADMIN_CACHE.filter(function(x){return x.id===id;})[0]; if(!u) return;
+  if(u.id===STATE.sessionUserId&&!CLOUD.proxy){ toast("不能删除自己的账号","","err"); return; }
+  openModal({title:"删除用户",
+    body:'<p style="font-size:13.5px">确定删除 <b>'+esc(u.name)+"</b>（"+esc(u.username||u.email)+'）？</p><p style="font-size:12.5px;color:var(--muted);margin-top:6px">该用户的全部出差记录与照片将从云端删除，且无法恢复。</p>',
+    foot:'<button class="btn" data-close>取消</button><button class="btn btn-danger" id="admDelGo">确认删除</button>',
+    onMount:function(root){
+      root.querySelector("#admDelGo").addEventListener("click",async function(){
+        try{ await api("DELETE","/api/admin/users/"+id); closeModal(); toast("已删除用户",u.name); renderAdmin(); }
+        catch(e){ toast("删除失败",e.message,"err"); }
+      });
+    }});
+}
+async function enterProxy(userId){
+  const info=ADMIN_CACHE.filter(function(x){return x.id===userId;})[0];
+  try{
+    const d=await api("GET","/api/admin/data/"+userId);
+    CLOUD.adminHome={userId:STATE.sessionUserId,view:currentView};
+    CLOUD.proxy={userId:userId,name:info?info.name:"用户"};
+    let u=STATE.users.filter(function(x){return x.id===userId;})[0];
+    if(!u){ u={id:userId,name:CLOUD.proxy.name,email:info?(info.email||""):"",role:info?info.role:"user",createdAt:info?info.createdAt:Date.now()}; STATE.users.push(u); }
+    STATE.sessionUserId=userId;
+    if(d&&d.data){
+      applyCloudData(userId,d.data);
+      CLOUD.uploaded=new Set((d.data.photos||[]).map(function(p){return p.id;})); saveCloudSession();
+    }else{
+      ["trips","expenses","locations","photos","reminders"].forEach(function(k){ STATE[k]=STATE[k].filter(function(x){return x.userId!==userId;}); });
+    }
+    const first=myTrips()[0]; STATE.currentTripId=first?first.id:null;
+    $("#proxyBar").hidden=false;
+    $("#proxyBarTxt").textContent="管理员代管模式：正在修改「"+CLOUD.proxy.name+"」的数据，改动会实时同步";
+    setSyncStatus("ok");
+    setView("overview"); refreshAll();
+    toast("已进入代管模式","现在可以修改该用户的全部数据");
+  }catch(e){ toast("进入代管失败",e.message,"err"); }
+}
+async function exitProxy(){
+  const home=CLOUD.adminHome||{userId:STATE.sessionUserId};
+  CLOUD.proxy=null; $("#proxyBar").hidden=true;
+  STATE.sessionUserId=home.userId;
+  try{
+    const d=await api("GET","/api/data");
+    if(d&&d.data){
+      applyCloudData(STATE.sessionUserId,d.data);
+      CLOUD.uploaded=new Set((d.data.photos||[]).map(function(p){return p.id;})); saveCloudSession();
+    }
+  }catch(e){}
+  const first=myTrips()[0]; STATE.currentTripId=first?first.id:null;
+  setView("overview"); refreshAll();
+  toast("已退出代管","已返回我的账号");
+}
+
+/* ================= export（归档导出 Word / Excel / PDF / CSV） ================= */
+function moneyPlain(n){ return (Math.round((+n||0)*100)/100).toFixed(2); }
+function sanitizeName(s){ return String(s||"").replace(/[\\/:*?"<>|]/g,"_").slice(0,40); }
+function collectTripBundle(userId,userName,t){
+  return { userId:userId, userName:userName, trip:t,
+    expenses:STATE.expenses.filter(function(x){return x.userId===userId&&x.tripId===t.id;}),
+    locations:STATE.locations.filter(function(x){return x.userId===userId&&x.tripId===t.id;}),
+    reminders:STATE.reminders.filter(function(x){return x.userId===userId&&x.tripId===t.id;}),
+    photos:STATE.photos.filter(function(x){return x.userId===userId&&x.tripId===t.id;})
+  };
+}
+async function exportCollectAdmin(userSel,tripId){
+  let users=ADMIN_CACHE.slice();
+  if(userSel&&userSel!=="all") users=users.filter(function(u){return u.id===userSel;});
+  const out=[];
+  for(const u of users){
+    let data=null, photoFull=null;
+    if(u.id===STATE.sessionUserId&&!CLOUD.proxy){
+      photoFull=STATE.photos.filter(function(x){return x.userId===u.id;});
+    }else{
+      try{ const r=await api("GET","/api/admin/data/"+u.id); data=r&&r.data?r.data:null; }catch(e){}
+    }
+    if(!data) continue;
+    const trips=tripId?(data.trips||[]).filter(function(t){return t.id===tripId;}):(data.trips||[]);
+    trips.forEach(function(t){
+      out.push({ userId:u.id, userName:u.name, trip:t,
+        expenses:(data.expenses||[]).filter(function(x){return x.tripId===t.id;}),
+        locations:(data.locations||[]).filter(function(x){return x.tripId===t.id;}),
+        reminders:(data.reminders||[]).filter(function(x){return x.tripId===t.id;}),
+        photos:(data.photos||[]).filter(function(x){return x.tripId===t.id;}).map(function(p){
+          const full=photoFull?photoFull.filter(function(x){return x.id===p.id;})[0]:null;
+          return full?full:p;
+        })
+      });
+    });
+  }
+  return out;
+}
+async function ensurePhotoUrls(bundles,budget){
+  let used=0;
+  for(const b of bundles){
+    for(const p of b.photos){
+      if(used>=budget) return;
+      if(!p.dataUrl&&CLOUD.token){
+        try{
+          const q=p.userId&&p.userId!==STATE.sessionUserId?("?u="+p.userId):"";
+          const r=await api("GET","/api/photo/"+p.id+q);
+          if(r&&r.dataUrl){ p.dataUrl=r.dataUrl; used++; }
+        }catch(e){ used++; }
+      }
+    }
+  }
+}
+function archiveDocHTML(bundles,opts){
+  const now=fmtDT(Date.now());
+  let totalAll=0, countAll=0;
+  const sections=bundles.map(function(b){
+    const t=b.trip||{};
+    const total=b.expenses.reduce(function(s,e){return s+(+e.amount||0);},0);
+    totalAll+=total; countAll+=b.expenses.length;
+    const byCat={}; CATS.forEach(function(c){ byCat[c.id]=0; });
+    b.expenses.forEach(function(e){ byCat[e.category]=(byCat[e.category]||0)+(+e.amount||0); });
+    let h='<div class="sec"><div class="stitle">'+esc(t.name||"未命名出差")+'<span class="suser">'+esc(b.userName)+"</span></div>";
+    h+='<table><tr><th style="width:19%">出发地</th><td style="width:31%">'+esc(t.from||"—")+'</td><th style="width:19%">目的地</th><td style="width:31%">'+esc(t.to||"—")+"</td></tr>"
+      +'<tr><th>出发日期</th><td>'+esc(t.startDate||"—")+'</td><th>返程日期</th><td>'+esc(t.endDate||"进行中")+"</td></tr>"
+      +'<tr><th>出差目的</th><td>'+esc(t.purpose||"—")+'</td><th>行程天数</th><td>'+esc(tripDays(t))+"</td></tr></table>";
+    h+='<div class="h3">开销汇总（合计 '+moneyPlain(total)+' 元，共 '+b.expenses.length+" 笔）</div>";
+    h+='<table><tr><th>分类</th><th>金额（元）</th><th>占比</th></tr>';
+    CATS.forEach(function(c){ if(byCat[c.id]>0){ h+='<tr><td>'+c.name+"</td><td class=\"num\">"+moneyPlain(byCat[c.id])+'</td><td class="num">'+Math.round(byCat[c.id]/(total||1)*100)+"%</td></tr>"; } });
+    h+="</table>";
+    if(b.expenses.length){
+      h+='<div class="h3">开销明细</div><table><tr><th>日期</th><th>分类</th><th>说明</th><th>金额（元）</th></tr>';
+      b.expenses.slice().sort(function(a,c){ return String(a.date||"").localeCompare(String(c.date||"")); }).forEach(function(e){
+        h+="<tr><td>"+esc(e.date||"")+"</td><td>"+esc(catOf(e.category).name)+"</td><td>"+esc(e.note||"—")+'</td><td class="num">'+moneyPlain(e.amount)+"</td></tr>";
+      });
+      h+="</table>";
+    }
+    if(b.locations.length){
+      h+='<div class="h3">定位记录（含坐标与点位名称）</div><table><tr><th>点位名称</th><th>纬度</th><th>经度</th><th>备注</th><th>时间</th></tr>';
+      b.locations.forEach(function(l){
+        h+="<tr><td>"+esc(l.name||"未命名")+"</td><td class=\"num\">"+(l.lat!=null?l.lat.toFixed(6):"—")+'</td><td class="num">'+(l.lng!=null?l.lng.toFixed(6):"—")+"</td><td>"+esc(l.note||"—")+"</td><td>"+esc(fmtDT(l.ts))+"</td></tr>";
+      });
+      h+="</table>";
+    }
+    if(b.reminders.length){
+      h+='<div class="h3">待办提醒</div><table><tr><th>内容</th><th>计划时间</th><th>状态</th></tr>';
+      b.reminders.forEach(function(r){ h+="<tr><td>"+esc(r.title||"")+"</td><td>"+esc(fmtDT(r.dueTs))+"</td><td>"+(r.done?"已完成":(r.dueTs<=Date.now()?"已到期":"待办"))+"</td></tr>"; });
+      h+="</table>";
+    }
+    const withUrl=b.photos.filter(function(p){return p.dataUrl;});
+    if(b.photos.length){
+      h+='<div class="h3">票据照片（'+b.photos.length+' 张）</div>';
+      if(withUrl.length){
+        h+='<div class="photorow">';
+        withUrl.forEach(function(p){ h+='<figure><img src="'+p.dataUrl+'" /><figcaption>'+esc(p.name||"票据照片")+"</figcaption></figure>"; });
+        h+="</div>";
+      }else{ h+='<p class="muted">照片已云端保存（批量导出时不再嵌入图片）。</p>'; }
+    }
+    return h+"</div>";
+  }).join('<div style="page-break-after:always"></div>');
+  const head='<div class="cover"><h1>出差记录归档文档</h1><p class="sub">TripMate 出差助手 · 生成时间 '+now+"</p>"
+    +'<p class="sub">共 '+bundles.length+' 趟出差 · '+countAll+' 笔开销 · 合计 '+moneyPlain(totalAll)+" 元</p></div>";
+  const foot='<p class="sig">制表：TripMate 出差助手　　导出时间：'+now+"　　本文件由系统自动生成</p>";
+  return {head:head,sections:sections,foot:foot};
+}
+function wordDocHTML(bundles){
+  const d=archiveDocHTML(bundles,{});
+  return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>TripMate 出差记录归档</title><style>'
+    +"@page{size:A4;margin:2cm}"
+    +"body{font-family:'Microsoft YaHei','PingFang SC','SimSun',sans-serif;font-size:11pt;color:#1B2430;line-height:1.6}"
+    +".cover{text-align:center;margin:12pt 0 20pt;border-bottom:3px solid #C2410C;padding-bottom:12pt}"
+    +"h1{font-size:22pt;margin:0 0 6pt;color:#1B2430}"
+    +".sub{color:#666;font-size:10.5pt;margin:2pt 0}"
+    +".sec{margin:14pt 0}"
+    +".stitle{font-size:15pt;font-weight:bold;color:#C2410C;border-left:5px solid #C2410C;padding-left:8pt;margin:10pt 0 8pt}"
+    +".suser{float:right;font-size:10.5pt;color:#666;font-weight:normal}"
+    +".h3{font-size:12pt;font-weight:bold;margin:12pt 0 4pt;color:#1B2430}"
+    +"table{border-collapse:collapse;width:100%;margin:4pt 0 10pt}"
+    +"th,td{border:1px solid #B9B2A6;padding:5pt 7pt;font-size:10pt;text-align:left;vertical-align:top}"
+    +"th{background:#F5EFE7;color:#5a4a3a}"
+    +".num{text-align:right}"
+    +".photorow img{width:200px;border:1px solid #ccc;margin:4pt}"
+    +"figcaption{font-size:9pt;color:#666}"
+    +".muted{color:#888;font-size:10pt}"
+    +".sig{margin-top:24pt;border-top:1px solid #ccc;padding-top:8pt;color:#888;font-size:9.5pt;text-align:center}"
+    +"</style></head><body>"+d.head+d.sections+d.foot+"</body></html>";
+}
+function downloadFile(content,filename,mime){
+  const blob=new Blob(content,{type:mime});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); },2000);
+}
+function exportWord(bundles,name){
+  downloadFile(["\ufeff",wordDocHTML(bundles)],name+".doc","application/msword");
+  toast("Word 已导出",name+".doc");
+}
+function printArchive(bundles,name){
+  const d=archiveDocHTML(bundles,{});
+  const w=window.open("","_blank");
+  if(!w){ toast("无法打开打印窗口","请允许浏览器弹出窗口后重试","err"); return; }
+  w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>'
+    +"@page{size:A4;margin:1.8cm}body{font-family:'Microsoft YaHei','PingFang SC',sans-serif;color:#1B2430;font-size:13px;line-height:1.6}"
+    +".cover{text-align:center;margin:14px 0 22px;border-bottom:3px solid #C2410C;padding-bottom:12px}"
+    +"h1{font-size:26px;margin:0 0 6px}.sub{color:#666;margin:2px 0}"
+    +".sec{margin:16px 0}.stitle{font-size:18px;font-weight:bold;color:#C2410C;border-left:5px solid #C2410C;padding-left:9px;margin:12px 0 9px}"
+    +".suser{float:right;font-size:12px;color:#666;font-weight:normal}"
+    +".h3{font-size:14px;font-weight:bold;margin:13px 0 5px}"
+    +"table{border-collapse:collapse;width:100%;margin:5px 0 12px}th,td{border:1px solid #B9B2A6;padding:6px 8px;font-size:12px;text-align:left}"
+    +"th{background:#F5EFE7}.num{text-align:right}"
+    +".photorow img{width:210px;border:1px solid #ccc;margin:4px}figcaption{font-size:11px;color:#666}"
+    +".muted{color:#888}.sig{margin-top:26px;border-top:1px solid #ccc;padding-top:9px;color:#888;font-size:11px;text-align:center}"
+    +"</style></head><body>"+d.head+d.sections+d.foot+"</body></html>");
+  w.document.close();
+  setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){} },600);
+}
+let XLSX_LOADING=null;
+function loadXLSX(){
+  if(window.XLSX) return Promise.resolve();
+  if(XLSX_LOADING) return XLSX_LOADING;
+  XLSX_LOADING=new Promise(function(res,rej){
+    const s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+    s.onload=function(){ res(); };
+    s.onerror=function(){ rej(new Error("表格组件加载失败")); };
+    document.head.appendChild(s);
+  });
+  return XLSX_LOADING;
+}
+async function exportExcel(bundles,name){
+  try{ await loadXLSX(); }
+  catch(e){ exportCSV(bundles,name); return; }
+  const wb=XLSX.utils.book_new();
+  const sum=[["用户","出差名称","出发地","目的地","出发日期","返程日期","行程天数","开销总额(元)","开销笔数","定位点","照片","提醒"]];
+  const exp=[["用户","出差名称","日期","分类","说明","金额(元)"]];
+  const loc=[["用户","出差名称","点位名称","纬度","经度","备注","时间","地图链接"]];
+  const rem=[["用户","出差名称","提醒内容","计划时间","状态"]];
+  bundles.forEach(function(b){
+    const t=b.trip||{};
+    const total=b.expenses.reduce(function(s,e){return s+(+e.amount||0);},0);
+    sum.push([b.userName,t.name||"",t.from||"",t.to||"",t.startDate||"",t.endDate||"进行中",tripDays(t),Number(moneyPlain(total)),b.expenses.length,b.locations.length,b.photos.length,b.reminders.length]);
+    b.expenses.forEach(function(e){ exp.push([b.userName,t.name||"",e.date||"",catOf(e.category).name,e.note||"",Number(moneyPlain(e.amount))]); });
+    b.locations.forEach(function(l){ loc.push([b.userName,t.name||"",l.name||"",l.lat!=null?l.lat:"",l.lng!=null?l.lng:"",l.note||"",fmtDT(l.ts),osmLink(l)]); });
+    b.reminders.forEach(function(r){ rem.push([b.userName,t.name||"",r.title||"",fmtDT(r.dueTs),r.done?"已完成":(r.dueTs<=Date.now()?"已到期":"待办")]); });
+  });
+  const s1=XLSX.utils.aoa_to_sheet(sum); s1["!cols"]=[{wch:10},{wch:24},{wch:10},{wch:10},{wch:12},{wch:12},{wch:9},{wch:12},{wch:9},{wch:8},{wch:7},{wch:7}];
+  const s2=XLSX.utils.aoa_to_sheet(exp); s2["!cols"]=[{wch:10},{wch:24},{wch:12},{wch:8},{wch:28},{wch:11}];
+  const s3=XLSX.utils.aoa_to_sheet(loc); s3["!cols"]=[{wch:10},{wch:24},{wch:18},{wch:11},{wch:11},{wch:16},{wch:18},{wch:30}];
+  const s4=XLSX.utils.aoa_to_sheet(rem); s4["!cols"]=[{wch:10},{wch:24},{wch:26},{wch:18},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,s1,"归档汇总");
+  XLSX.utils.book_append_sheet(wb,s2,"开销明细");
+  XLSX.utils.book_append_sheet(wb,s3,"定位记录");
+  XLSX.utils.book_append_sheet(wb,s4,"待办提醒");
+  XLSX.writeFile(wb,name+".xlsx");
+  toast("Excel 已导出",name+".xlsx");
+}
+function exportCSV(bundles,name){
+  const rows=[["用户","出差名称","日期","分类","说明","金额(元)"]];
+  bundles.forEach(function(b){
+    b.expenses.forEach(function(e){ rows.push([b.userName,(b.trip||{}).name||"",e.date||"",catOf(e.category).name,e.note||"",moneyPlain(e.amount)]); });
+  });
+  const csv=rows.map(function(r){ return r.map(function(c){ return '"'+String(c==null?"":c).replace(/"/g,'""')+'"'; }).join(","); }).join("\r\n");
+  downloadFile(["\ufeff",csv],name+"_开销明细.csv","text/csv;charset=utf-8");
+  toast("CSV 已导出","已用备用格式导出开销明细");
+}
+function openExportModal(mode,preuserId){
+  const isAdminMode=mode==="admin";
+  if(isAdminMode&&!isAdmin()&&!CLOUD.proxy){ toast("需要管理员权限","","err"); return; }
+  const users=ADMIN_CACHE;
+  let scopeHtml="";
+  if(isAdminMode){
+    scopeHtml+='<div class="field"><label>按用户筛选</label><select class="input" id="exUser">'
+      +'<option value="all"'+(preuserId?"":" selected")+'>全部用户</option>'
+      +users.map(function(u){ return '<option value="'+u.id+'"'+(preuserId===u.id?" selected":"")+">"+esc(u.name)+(u.role==="admin"?"（管理员）":"")+"</option>"; }).join("")
+      +"</select></div>";
+  }
+  scopeHtml+='<div class="field"><label>按出差条目筛选</label><select class="input" id="exTrip"><option value="all">全部出差</option></select></div>';
+  scopeHtml+='<div style="display:grid;gap:9px;margin-top:6px">'
+    +'<div class="export-opt" data-fmt="word"><span data-icon="receipt" style="color:var(--accent);display:inline-flex;margin-top:2px"></span><div><b>Word 文档（.doc）</b><span>排版精美的归档文档，含行程、汇总、明细、定位坐标与照片</span></div></div>'
+    +'<div class="export-opt" data-fmt="excel"><span data-icon="wallet" style="color:var(--accent);display:inline-flex;margin-top:2px"></span><div><b>Excel 表格（.xlsx）</b><span>四个工作表：归档汇总 / 开销明细 / 定位记录 / 待办提醒</span></div></div>'
+    +'<div class="export-opt" data-fmt="pdf"><span data-icon="printer" style="color:var(--accent);display:inline-flex;margin-top:2px"></span><div><b>PDF / 打印</b><span>打开打印预览，可选择“另存为 PDF”</span></div></div>'
+    +'<div class="export-opt" data-fmt="csv"><span data-icon="download" style="color:var(--accent);display:inline-flex;margin-top:2px"></span><div><b>CSV 备用（.csv）</b><span>仅开销明细，兼容性最好</span></div></div>'
+    +"</div>";
+  const scrim=openModal({title:isAdminMode?"管理员批量导出":"导出归档文档",body:'<div class="note" style="margin-bottom:12px"><span data-icon="info"></span><div>定位记录会包含点位名称与经纬度坐标，并附地图链接；文档自动按用户和出差分节排版。</div></div>'+scopeHtml,
+    foot:'<button class="btn" data-close>关闭</button>',
+    onMount:function(root){
+      const tripSel=$("#exTrip",root);
+      const userSel=$("#exUser",root);
+      async function fillTrips(){
+        tripSel.innerHTML='<option value="all">全部出差</option>';
+        let trips=[];
+        if(isAdminMode){
+          const uid=userSel?userSel.value:"all";
+          if(uid&&uid!=="all"){
+            tripSel.innerHTML='<option value="all">加载中…</option>';
+            try{ const r=await api("GET","/api/admin/data/"+uid); trips=(r&&r.data&&r.data.trips)||[]; }
+            catch(e){}
+          }
+        }else{ trips=myTrips(); }
+        tripSel.innerHTML='<option value="all">全部出差</option>'+trips.map(function(t){ return '<option value="'+t.id+'">'+esc(t.name||"未命名")+"（"+esc(fmtDate(dayStart(t.startDate)))+"）</option>"; }).join("");
+      }
+      fillTrips();
+      if(userSel) userSel.addEventListener("change",fillTrips);
+      root.querySelectorAll(".export-opt").forEach(function(btn){
+        btn.addEventListener("click",async function(){
+          const fmt=btn.getAttribute("data-fmt");
+          const userSel2=userSel?userSel.value:null;
+          const tripId=tripSel.value==="all"?null:tripSel.value;
+          btn.disabled=true;
+          try{
+            let bundles;
+            if(isAdminMode) bundles=await exportCollectAdmin(userSel2,tripId);
+            else{
+              const u=me(); const uid=STATE.sessionUserId;
+              const trips=tripId?STATE.trips.filter(function(t){return t.id===tripId;}):myTrips();
+              bundles=trips.map(function(t){ return collectTripBundle(uid,u?u.name:"",t); });
+            }
+            if(!bundles.length){ toast("没有可导出的数据","该范围内还没有出差记录","warn"); return; }
+            if(fmt==="word"||fmt==="pdf") await ensurePhotoUrls(bundles,30);
+            const label=bundles.length===1?sanitizeName((bundles[0].trip&&bundles[0].trip.name)||"行程"):(isAdminMode?"多用户汇总":"全部出差");
+            const name="TripMate_出差归档_"+label+"_"+new Date().toISOString().slice(0,10);
+            if(fmt==="word") exportWord(bundles,name);
+            else if(fmt==="excel") exportExcel(bundles,name);
+            else if(fmt==="pdf") printArchive(bundles,name);
+            else exportCSV(bundles,name);
+            closeModal();
+          }catch(e){ toast("导出失败",e.message,"err"); }
+          finally{ btn.disabled=false; }
+        });
+      });
+    }});
+  renderIcons(scrim);
+}
+
+/* ================= global click routing ================= */
+document.addEventListener("click",function(ev){
+  if(ev.target.closest("#proxyExit")){ exitProxy(); return; }
+  if(ev.target.closest("#btnExport")){ openExportModal("self"); return; }
+  if(ev.target.closest("#adminAddUser")){ openAdminUserModal(); return; }
+  if(ev.target.closest("#adminRefresh")){ renderAdmin(); return; }
+  if(ev.target.closest("#adminExportBtn")){ openExportModal("admin"); return; }
+  const aae=ev.target.closest("[data-admin-edit]"); if(aae){ openAdminUserModal(aae.getAttribute("data-admin-edit")); return; }
+  const aao=ev.target.closest("[data-admin-open]"); if(aao){ enterProxy(aao.getAttribute("data-admin-open")); return; }
+  const aad=ev.target.closest("[data-admin-del]"); if(aad){ openAdminDeleteUser(aad.getAttribute("data-admin-del")); return; }
+  const aax=ev.target.closest("[data-admin-export]"); if(aax){ openExportModal("admin",aax.getAttribute("data-admin-export")); return; }
+  const mloc=ev.target.closest("[data-map-loc]"); if(mloc){ openMapModal(mloc.getAttribute("data-map-loc")); return; }
+  const nav=ev.target.closest("[data-nav]");
+  if(nav){ setView(nav.getAttribute("data-nav")); return; }
+  const add=ev.target.closest("[data-add]");
+  if(add){ const kind=add.getAttribute("data-add"); if(kind==="expense") openExpenseModal(); if(kind==="photo") pickPhoto(); if(kind==="reminder") openReminderModal(); if(kind==="location") openLocationModal(); return; }
+  if(ev.target.closest("#locCaptureBtn")){ captureLocation(); return; }
+  if(ev.target.closest("#btnNewTrip")){ openTripModal(); return; }
+  if(ev.target.closest("#tripSwitch")){ tripSwitchMenu(ev.target.closest("#tripSwitch")); return; }
+  if(ev.target.closest("#btnSettings")){ openSettings(); return; }
+  if(ev.target.closest("#userChip")){ userMenu(ev.target.closest("#userChip")); return; }
+  if(ev.target.closest("#notifyBtn")){ askNotify(); return; }
+  if(ev.target.closest("#guestBtn")){ guestLogin().then(function(){ showApp(); toast("已进入体验账号","体验数据仅保存在本机"); }).catch(function(e){ toast("进入失败",String(e.message||e),"err"); }); return; }
+  const ee=ev.target.closest("[data-edit-exp]"); if(ee){ if(!canEdit()){ toast("普通用户不能修改已同步的记录","如需修改，请联系管理员处理","warn"); return; } openExpenseModal(ee.getAttribute("data-edit-exp")); return; }
+  const de=ev.target.closest("[data-del-exp]"); if(de){ if(!canEdit()){ toast("普通用户不能删除已同步的记录","如需删除，请联系管理员处理","warn"); return; } STATE.expenses=STATE.expenses.filter(function(x){return x.id!==de.getAttribute("data-del-exp");}); saveState(); refreshAll(); toast("已删除",""); return; }
+  const dl=ev.target.closest("[data-del-loc]"); if(dl){ if(!canEdit()){ toast("普通用户不能删除已同步的记录","请联系管理员处理","warn"); return; } STATE.locations=STATE.locations.filter(function(x){return x.id!==dl.getAttribute("data-del-loc");}); saveState(); refreshAll(); toast("已删除定位",""); return; }
+  const dp=ev.target.closest("[data-del-photo]"); if(dp){ if(!canEdit()){ toast("普通用户不能删除已同步的照片","请联系管理员处理","warn"); return; } deletePhoto(dp.getAttribute("data-del-photo")); return; }
+  const vp=ev.target.closest("[data-view-photo]"); if(vp){ viewPhoto(vp.getAttribute("data-view-photo")); return; }
+  const dr=ev.target.closest("[data-done-rem]"); if(dr){ if(!canEdit()){ toast("普通用户不能修改已同步的记录","请联系管理员处理","warn"); return; } const r=STATE.reminders.filter(function(x){return x.id===dr.getAttribute("data-done-rem");})[0]; if(r){ r.done=true; saveState(); refreshAll(); toast("已完成提醒",r.title); } return; }
+  const dx=ev.target.closest("[data-del-rem]"); if(dx){ if(!canEdit()){ toast("普通用户不能删除已同步的记录","请联系管理员处理","warn"); return; } STATE.reminders=STATE.reminders.filter(function(x){return x.id!==dx.getAttribute("data-del-rem");}); saveState(); refreshAll(); toast("已删除提醒",""); return; }
+  const st=ev.target.closest('[data-act="settings"]'); if(st){ openSettings(); return; }
+});
+function deletePhoto(id){
+  STATE.photos=STATE.photos.filter(function(x){return x.id!==id;});
+  saveState(); refreshAll(); toast("已删除照片","");
+}
+
+/* ================= auth wiring ================= */
+$("#authTabs").addEventListener("click",function(ev){ const b=ev.target.closest("[data-authtab]"); if(!b) return; const t=b.getAttribute("data-authtab"); $$("[data-authtab]").forEach(function(x){ x.classList.toggle("on",x===b); }); $("#loginForm").hidden=t!=="login"; $("#registerForm").hidden=t!=="register"; });
+$("#loginForm").addEventListener("submit",async function(ev){ ev.preventDefault(); const f=ev.target; try{ await login(f.account.value, f.password.value); showApp(); toast("登录成功","欢迎回来，数据已云端同步"); }catch(e){ const er=$("#loginErr"); er.textContent=e.message; er.hidden=false; } });
+$("#registerForm").addEventListener("submit",async function(ev){ ev.preventDefault(); const f=ev.target; try{ await register(f.name.value, f.email.value, f.password.value); showApp(); toast("注册成功","已为你创建第一趟出差"); }catch(e){ const er=$("#regErr"); er.textContent=e.message; er.hidden=false; } });
+
+/* ================= init ================= */
+function refreshAll(){ renderTopbar(); renderNav(); setView(currentView); }
+async function init(){
+  renderIcons(document);
+  loadCloudSession();
+  const saved=await loadState();
+  if(saved&&typeof saved==="object"){
+    STATE=Object.assign(STATE,saved);
+    ["users","trips","expenses","locations","photos","reminders"].forEach(function(k){ if(!Array.isArray(STATE[k])) STATE[k]=[]; });
+  }
+  const u=me();
+  if(u){
+    if(!u.local&&CLOUD.token){
+      setSyncStatus("busy");
+      pullLatest().then(function(ch){ if(ch){ refreshAll(); toast("已同步最新数据","云端记录已更新到本机"); } });
+    }
+    const t=curTrip(); if(!t){ const tr=myTrips()[0]; STATE.currentTripId=tr?tr.id:null; }
+    showApp();
+  }
+  else{ showAuth(); }
+}
+init();
+})();
+</script>
+</body>
+</html>
