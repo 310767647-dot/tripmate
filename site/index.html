@@ -1224,13 +1224,14 @@ function captureLocation(){
     openLocationModal();
   };
   const askGeo=function(){
-    toast("正在获取定位…","如浏览器弹出位置授权，请选择“允许”","warn");
+    toast("正在获取定位…","如浏览器弹出位置授权，请选择「允许」","warn");
     navigator.geolocation.getCurrentPosition(function(pos){
-      openLocationModal(pos.coords.latitude,pos.coords.longitude);
+      const g=wgs2gcj(pos.coords.latitude,pos.coords.longitude);
+      openLocationModal(g[0],g[1],true);
     },function(err){
       if(err&&err.code===1){ deniedHint(); }
       else{ failHint(err&&err.message?err.message:""); }
-    },{ enableHighAccuracy:true, timeout:8000, maximumAge:30000 });
+    },{ enableHighAccuracy:true, timeout:10000, maximumAge:0 });
   };
   if(navigator.permissions&&navigator.permissions.query){
     navigator.permissions.query({name:"geolocation"}).then(function(p){
@@ -1238,13 +1239,49 @@ function captureLocation(){
     }).catch(function(){ askGeo(); });
   }else{ askGeo(); }
 }
-function openLocationModal(lat,lng){
-  const body='<div class="field"><label>地点名称</label><input class="input" id="locName" placeholder="如：北京·国贸" value=""></div>'
-    +'<div class="grid2"><div class="field"><label>纬度</label><input class="input" id="locLat" placeholder="39.9042" value="'+(lat!=null?lat:"")+'"></div>'
+function openLocationModal(lat,lng,fromGps){
+  const hasCoords=(lat!=null&&lng!=null&&!isNaN(lat)&&!isNaN(lng));
+  const body='<div id="locMapPreview" style="height:220px;border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:12px;background:var(--surface-2)"><div style="padding:16px;color:var(--faint);font-size:12.5px">地图加载中…</div></div>'
+    +'<div class="field"><label>地点名称</label><input class="input" id="locName" placeholder="如：北京·国贸" value=""></div>'
+    +'<div class="grid2"><div class="field"><label>纬度'+(fromGps?' <span class="hint">已采集（国内地图坐标）</span>':'')+'</label><input class="input" id="locLat" placeholder="39.9042" value="'+(lat!=null?lat:"")+'"></div>'
     +'<div class="field"><label>经度</label><input class="input" id="locLng" placeholder="116.4074" value="'+(lng!=null?lng:"")+'"></div></div>'
-    +'<div class="field"><label>备注 <span class="hint">可选</span></label><input class="input" id="locNote" placeholder="如：客户公司 / 车站"></div>';
+    +'<div class="field"><label>备注 <span class="hint">可选</span></label><input class="input" id="locNote" placeholder="如：客户公司 / 车站"></div>'
+    +'<div class="note"><span data-icon="info"></span><div>地图上的橙色标记可拖动微调位置，拖动后坐标自动更新。</div></div>';
   const foot='<button class="btn" data-close>取消</button><button class="btn btn-accent" id="locSave" data-icon="check">保存定位</button>';
-  const scrim=openModal({title:"添加定位",body:body,foot:foot,onMount:function(root){
+  const scrim=openModal({title:fromGps?"采集当前位置":"添加定位",body:body,foot:foot,onMount:function(root){
+    let mapObj=null, markerObj=null;
+    const readInputs=function(){
+      const la=parseFloat($("#locLat",root).value), ln=parseFloat($("#locLng",root).value);
+      if(isNaN(la)||isNaN(ln)) return null;
+      return [la,ln];
+    };
+    const showMap=function(){
+      const pt=readInputs(); if(!pt) return;
+      const init=function(){
+        const el=document.getElementById("locMapPreview"); if(!el) return;
+        if(!mapObj){
+          mapObj=L.map(el,{zoomControl:true}).setView([pt[0],pt[1]],16);
+          L.tileLayer("https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}",{subdomains:"1234",maxZoom:18}).addTo(mapObj);
+          markerObj=L.marker([pt[0],pt[1]],{draggable:true}).addTo(mapObj);
+          markerObj.on("dragend",function(){
+            const p=markerObj.getLatLng();
+            $("#locLat",root).value=p.lat.toFixed(6);
+            $("#locLng",root).value=p.lng.toFixed(6);
+          });
+          setTimeout(function(){ try{ mapObj.invalidateSize(); }catch(e){} },250);
+        }else{
+          markerObj.setLatLng([pt[0],pt[1]]);
+          mapObj.panTo([pt[0],pt[1]]);
+        }
+      };
+      loadLeaflet().then(init).catch(function(e){
+        const el=document.getElementById("locMapPreview");
+        if(el) el.innerHTML='<div style="padding:16px;color:var(--faint);font-size:12.5px">'+esc(e.message)+'（坐标 '+pt[0].toFixed(5)+', '+pt[1].toFixed(5)+' 已填入）</div>';
+      });
+    };
+    if(hasCoords) showMap();
+    $("#locLat",root).addEventListener("change",showMap);
+    $("#locLng",root).addEventListener("change",showMap);
     root.querySelector("#locSave").addEventListener("click",function(){
       const name=$("#locName",root).value.trim();
       const la=parseFloat($("#locLat",root).value), ln=parseFloat($("#locLng",root).value);
