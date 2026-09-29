@@ -1212,35 +1212,53 @@ function renderLocation(){
   list.innerHTML=html;
   renderIcons(list);
 }
-let LOC_UI=null;
+let LOC_UI=null, LOC_WATCH=null, LOC_STOP=null;
+function locStopWatch(){
+  if(LOC_WATCH!=null&&navigator.geolocation){ navigator.geolocation.clearWatch(LOC_WATCH); LOC_WATCH=null; }
+  if(LOC_STOP){ clearTimeout(LOC_STOP); LOC_STOP=null; }
+}
 function captureLocation(){
   if(!curTrip()){ toast("请先创建出差","新建一趟出差后再记录定位","warn"); return; }
   if(!("geolocation" in navigator)){ toast("无法定位","当前浏览器不支持定位，请手动添加","warn"); openLocationModal(); return; }
+  locStopWatch();
   openLocationModal(null,null,true);
-  toast("正在获取定位…","如浏览器询问位置授权，请选择「允许」","warn");
-  navigator.geolocation.getCurrentPosition(function(pos){
-    const g=wgs2gcj(pos.coords.latitude,pos.coords.longitude);
-    if(LOC_UI) LOC_UI.setPosition(g[0],g[1],pos.coords.accuracy);
+  toast("正在定位…","自动连续读点取最准的一次，请保持在原地几秒","warn");
+  let best=null, got=0;
+  LOC_WATCH=navigator.geolocation.watchPosition(function(pos){
+    got++;
+    const cur={lat:pos.coords.latitude,lng:pos.coords.longitude,acc:pos.coords.accuracy||9999};
+    if(LOC_UI) LOC_UI.progress(cur.acc,got);
+    if(!best||cur.acc<best.acc) best=cur;
+    if(cur.acc<=30){ locStopWatch(); if(LOC_UI) LOC_UI.setPosition(best); }
   },function(err){
+    locStopWatch();
     if(LOC_UI) LOC_UI.fail(err);
-  },{ enableHighAccuracy:true, timeout:12000, maximumAge:0 });
+  },{ enableHighAccuracy:true, timeout:20000, maximumAge:0 });
+  LOC_STOP=setTimeout(function(){
+    locStopWatch();
+    if(best){ if(LOC_UI) LOC_UI.setPosition(best); }
+    else if(LOC_UI) LOC_UI.fail({code:3});
+  },15000);
 }
 function openLocationModal(lat,lng,fromGps){
   const hasCoords=(lat!=null&&lng!=null&&!isNaN(lat)&&!isNaN(lng));
-  const body='<div id="locMapPreview" style="height:230px;border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:12px;background:var(--surface-2)"><div style="padding:16px;color:var(--faint);font-size:12.5px;line-height:1.6">'+(fromGps?"正在获取定位…<br>首次使用会请求位置授权，请在弹窗中选择「允许」":"填写坐标后此处显示地图，标记可拖动微调")+'</div></div>'
-    +'<div id="locAcc" style="font-size:12px;color:var(--muted);margin:-4px 0 8px"></div>'
+  const body='<div id="locMapPreview" style="height:230px;border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:10px;background:var(--surface-2)"><div style="padding:16px;color:var(--faint);font-size:12.5px;line-height:1.6">'+(fromGps?"正在定位…（自动连续读点，取最准的一次）<br>首次使用会请求位置授权，请在弹窗中选择「允许」":"填写坐标后此处显示地图，标记可拖动微调")+'</div></div>'
+    +'<div id="locAcc" style="font-size:12px;color:var(--muted);margin:-2px 0 8px;line-height:1.6"></div>'
     +'<div class="field"><label>地点名称</label><input class="input" id="locName" placeholder="如：北京·国贸" value=""></div>'
-    +'<div class="grid2"><div class="field"><label>纬度'+(fromGps?' <span class="hint">定位后自动填入</span>':'')+'</label><input class="input" id="locLat" placeholder="'+(fromGps?"定位中…":"39.9042")+'" value="'+(lat!=null?lat:"")+'"></div>'
+    +'<div class="grid2"><div class="field"><label>纬度</label><input class="input" id="locLat" placeholder="'+(fromGps?"定位中…":"39.9042")+'" value="'+(lat!=null?lat:"")+'"></div>'
     +'<div class="field"><label>经度</label><input class="input" id="locLng" placeholder="'+(fromGps?"定位中…":"116.4074")+'" value="'+(lng!=null?lng:"")+'"></div></div>'
-    +'<div class="field"><label>备注 <span class="hint">可选</span></label><input class="input" id="locNote" placeholder="如：客户公司 / 车站"></div>';
+    +'<div class="field"><label>备注 <span class="hint">可选</span></label><input class="input" id="locNote" placeholder="如：客户公司 / 车站"></div>'
+    +'<div class="note"><span data-icon="info"></span><div>定位后可拖动地图上的标记微调到准确位置；如果标记整体偏移一个固定距离，点「切换坐标系」即可校正。</div></div>';
   const foot='<button class="btn" data-close>取消</button><button class="btn btn-accent" id="locSave" data-icon="check">保存定位</button>';
   const scrim=openModal({title:fromGps?"采集当前位置":"添加定位",body:body,foot:foot,onMount:function(root){
     let mapObj=null, markerObj=null, circleObj=null;
+    let rawWgsPt=null, gcjMode=true;
     const readInputs=function(){
       const la=parseFloat($("#locLat",root).value), ln=parseFloat($("#locLng",root).value);
       if(isNaN(la)||isNaN(ln)) return null;
       return [la,ln];
     };
+    const accLine=function(html){ const a=document.getElementById("locAcc"); if(a) a.innerHTML=html||""; };
     const renderMap=function(pt,accuracy){
       const init=function(){
         const el=document.getElementById("locMapPreview"); if(!el) return;
@@ -1253,7 +1271,9 @@ function openLocationModal(lat,lng,fromGps){
             const p=markerObj.getLatLng();
             $("#locLat",root).value=p.lat.toFixed(6);
             $("#locLng",root).value=p.lng.toFixed(6);
-            if(circleObj) circleObj.remove();
+            rawWgsPt=null;
+            if(circleObj){ circleObj.remove(); circleObj=null; }
+            accLine("已按标记位置记录坐标。");
           });
           setTimeout(function(){ try{ mapObj.invalidateSize(); }catch(e){} },250);
         }else if(mapObj){
@@ -1270,20 +1290,36 @@ function openLocationModal(lat,lng,fromGps){
     const showMap=function(){ const pt=readInputs(); if(!pt) return; renderMap(pt,null); };
     if(hasCoords) showMap();
     LOC_UI={
-      setPosition:function(la,ln,accuracy){
+      progress:function(acc,n){ accLine("第 "+n+" 次读数 · 当前精度 ±"+Math.round(acc)+" 米（自动取最准的一次）"); },
+      setPosition:function(raw){
         if(!document.getElementById("locMapPreview")) return;
-        $("#locLat",root).value=(+la).toFixed(6);
-        $("#locLng",root).value=(+ln).toFixed(6);
-        renderMap([+la,+ln],accuracy);
-        const acc=document.getElementById("locAcc");
-        if(acc) acc.innerHTML=accuracy?('定位精度约 ±'+Math.round(accuracy)+' 米'+(accuracy>150?'（偏差较大：建议到室外或靠窗重试，或拖动地图上的标记修正）':'')):'';
+        rawWgsPt={lat:raw.lat,lng:raw.lng};
+        const d=gcjMode?wgs2gcj(raw.lat,raw.lng):[raw.lat,raw.lng];
+        $("#locLat",root).value=d[0].toFixed(6);
+        $("#locLng",root).value=d[1].toFixed(6);
+        renderMap(d,raw.acc);
+        accLine('定位精度约 ±'+Math.round(raw.acc)+' 米'+(raw.acc>150?'（偏差较大，已自动取最准读数）':'')
+          +' <button class="btn btn-sm" id="locToggle" style="padding:4px 8px">位置仍偏？切换坐标系</button>'
+          +' <button class="btn btn-sm" id="locRe" style="padding:4px 8px">重新定位</button>');
+        const tb=document.getElementById("locToggle");
+        if(tb) tb.addEventListener("click",function(){
+          if(!rawWgsPt){ toast("标记已手动调整","如需切换请重新定位","warn"); return; }
+          gcjMode=!gcjMode;
+          const nd=gcjMode?wgs2gcj(rawWgsPt.lat,rawWgsPt.lng):[rawWgsPt.lat,rawWgsPt.lng];
+          $("#locLat",root).value=nd[0].toFixed(6);
+          $("#locLng",root).value=nd[1].toFixed(6);
+          renderMap(nd,raw.acc);
+          toast(gcjMode?"已切换为国内地图坐标":"已切换为原始GPS坐标","看地图上标记对不对，对了就保存","warn");
+        });
+        const rb=document.getElementById("locRe");
+        if(rb) rb.addEventListener("click",function(){ captureLocation(); });
       },
       fail:function(err){
         const el=document.getElementById("locMapPreview"); if(!el) return;
         let msg;
-        if(err&&err.code===1){ msg='位置授权被拒绝或未弹出授权框。<br>解决：①浏览器地址栏/菜单 → 站点设置 → 位置 → 允许；②手机系统设置中开启定位服务。然后点击下方「重新定位」。'; }
-        else if(err&&err.code===2){ msg='暂时无法获取位置，设备定位服务可能未开启。<br>解决：手机系统设置 → 定位服务 → 开启。也可以直接手动填写名称和坐标。'; }
-        else { msg='获取位置超时（信号较弱）。<br>建议到室外或靠窗的位置，点击下方「重新定位」重试，或直接手动填写。'; }
+        if(err&&err.code===1){ msg='位置授权被拒绝或未弹出授权框。<br>解决：①浏览器菜单 → 网站设置 → 位置 → 允许；②手机系统设置中开启定位服务。然后点「重新定位」。'; }
+        else if(err&&err.code===2){ msg='暂时无法获取位置，设备定位服务可能未开启。<br>解决：手机系统设置 → 定位服务 → 开启。也可以直接手动填写。'; }
+        else { msg='获取位置超时（信号较弱或长时间未读到有效点）。<br>建议到室外或靠窗位置点「重新定位」，或直接手动填写。'; }
         el.innerHTML='<div style="padding:16px;color:#B45309;font-size:12.5px;line-height:1.7;background:var(--warn-soft);border-radius:8px">'+msg+'</div><div style="padding:10px 16px"><button class="btn btn-sm btn-accent" id="locRetry">重新定位</button> <button class="btn btn-sm" id="locManual">直接手动填写</button></div>';
         const rb=document.getElementById("locRetry");
         if(rb) rb.addEventListener("click",function(){ captureLocation(); });
