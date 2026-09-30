@@ -501,7 +501,7 @@ textarea.input{resize:vertical;min-height:74px}
       <!-- PHOTO -->
       <section class="view" data-view="photo" hidden>
         <div class="view-head">
-          <div class="grow"><h2>票据照片</h2><p>拍照或选择图片，压缩后自动云端同步</p></div>
+          <div class="grow"><h2>现场照片</h2><p>出差现场、票据凭证等照片，压缩后自动云端同步，可自定义名称</p></div>
           <button class="btn btn-accent btn-sm" data-add="photo"><span data-icon="camera"></span>添加照片</button>
         </div>
         <div class="photo-grid" id="photoGrid"></div>
@@ -1069,7 +1069,7 @@ const NAV=[
   {id:"overview",label:"行程概览",icon:"route"},
   {id:"expense",label:"开销台账",icon:"wallet"},
   {id:"location",label:"定位记录",icon:"pin"},
-  {id:"photo",label:"票据照片",icon:"camera"},
+  {id:"photo",label:"现场照片",icon:"camera"},
   {id:"reminder",label:"日程提醒",icon:"bell"}
 ];
 let currentView="overview";
@@ -1371,13 +1371,13 @@ function renderPhoto(){
   const photos=tripSet(STATE.photos).slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
   const grid=$("#photoGrid");
   if(!photos.length){
-    grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="eico" data-icon="camera"></div><b>还没有照片</b><p>拍照或选择图片作为票据凭证，压缩后自动云端同步。</p><button class="btn btn-accent btn-sm" data-add="photo"><span data-icon="camera"></span>添加照片</button></div>';
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="eico" data-icon="camera"></div><b>还没有照片</b><p>拍出现场、票据等照片自动同步，添加后可自定义名称。</p><button class="btn btn-accent btn-sm" data-add="photo"><span data-icon="camera"></span>添加照片</button></div>';
     renderIcons(grid); return;
   }
   let html="";
   const canDelPhoto=canEdit();
   photos.forEach(function(p){
-    html+='<div class="pcard"><img src="'+(p.dataUrl||"")+'" alt="'+esc(p.name||"票据照片")+'" data-view-photo="'+p.id+'"><div class="pcap"><div class="pm"><b>'+esc(p.name||"票据照片")+"</b><span>"+esc(fmtDate(p.ts))+'</span></div>'+(canDelPhoto?'<button class="iconbtn" data-del-photo="'+p.id+'" title="删除" data-icon="trash"></button>':'')+'</div></div>';
+    html+='<div class="pcard"><img src="'+(p.dataUrl||"")+'" alt="'+esc(p.name||"现场照片")+'" data-view-photo="'+p.id+'"><div class="pcap"><div class="pm"><b>'+esc(p.name||"现场照片")+"</b><span>"+esc(fmtDate(p.ts))+'</span></div>'+(canDelPhoto?'<button class="iconbtn" data-rename-photo="'+p.id+'" title="重命名" data-icon="edit"></button><button class="iconbtn" data-del-photo="'+p.id+'" title="删除" data-icon="trash"></button>':'')+'</div></div>';
   });
   grid.innerHTML=html;
   renderIcons(grid);
@@ -1398,7 +1398,10 @@ function pickPhoto(){
     for(let i=0;i<files.length;i++){
       try{
         const dataUrl=await compressImage(files[i]);
-        STATE.photos.push({id:uid(),userId:STATE.sessionUserId,tripId:STATE.currentTripId,name:(files[i].name||"照片").replace(/\.[a-z0-9]+$/i,""),dataUrl:dataUrl,ts:Date.now()});
+        const baseName=(files[i].name||"").replace(/\.[a-z0-9]+$/i,"");
+        const cameraLike=/^(img|dsc|pxl|photo|screenshot|mmexport)[-_ \d]/i.test(baseName)||!baseName;
+        const defName=cameraLike?("现场照片 "+fmtDT(Date.now())):(baseName||"现场照片");
+        STATE.photos.push({id:uid(),userId:STATE.sessionUserId,tripId:STATE.currentTripId,name:defName,dataUrl:dataUrl,ts:Date.now()});
         added++;
       }catch(e){ toast("有一张图片处理失败","请尝试其他图片","err"); }
       if(tripSet(STATE.photos).length>=MAX_PHOTOS) break;
@@ -1436,7 +1439,7 @@ function viewPhoto(id){
       openModal({title:p.name||"票据照片",body:'<p style="color:var(--muted);font-size:13.5px">照片正在从云端加载，请稍候…</p>',foot:'<button class="btn" data-close>关闭</button>'});
       return;
     }
-    openModal({title:p.name||"票据照片",body:'<img src="'+p.dataUrl+'" alt="票据照片" style="width:100%;border-radius:11px;border:1px solid var(--line)"><p style="font-size:12.5px;color:var(--muted);margin-top:10px">'+esc(fmtDT(p.ts))+"</p>",foot:(canEdit()?'<button class="btn" data-close>关闭</button><button class="btn btn-danger" id="pvDel" data-icon="trash">删除</button>':'<button class="btn" data-close>关闭</button>'),onMount:function(root){ const del=root.querySelector("#pvDel"); if(del) del.addEventListener("click",function(){ deletePhoto(id); closeModal(); }); }});
+    openModal({title:p.name||"现场照片",body:'<img src="'+p.dataUrl+'" alt="现场照片" style="width:100%;border-radius:11px;border:1px solid var(--line)"><p style="font-size:12.5px;color:var(--muted);margin-top:10px">'+esc(fmtDT(p.ts))+"</p>",foot:(canEdit()?'<button class="btn" id="pvRename" data-icon="edit">重命名</button><button class="btn" data-close>关闭</button><button class="btn btn-danger" id="pvDel" data-icon="trash">删除</button>':'<button class="btn" data-close>关闭</button>'),onMount:function(root){ const del=root.querySelector("#pvDel"); if(del) del.addEventListener("click",function(){ deletePhoto(id); closeModal(); }); const rn=root.querySelector("#pvRename"); if(rn) rn.addEventListener("click",function(){ closeModal(); openRenamePhotoModal(id); }); }});
   };
   if(!p.dataUrl){ hydratePhotos().then(show); } else { show(); }
 }
@@ -1672,6 +1675,27 @@ function importData(){
     reader.readAsText(f);
   });
   input.click();
+}
+
+/* ================= photo rename（照片自定义命名） ================= */
+function openRenamePhotoModal(id){
+  const p=STATE.photos.filter(function(x){return x.id===id;})[0]; if(!p) return;
+  const body='<div class="field"><label>照片名称</label><input class="input" id="phName" placeholder="如：客户大楼外景 / 餐厅小票" value="'+esc(p.name||"")+'"></div>'
+    +'<p style="font-size:12px;color:var(--faint)">名称会同步显示在照片列表、大图查看和导出文档中。</p>';
+  openModal({title:"重命名照片",body:body,
+    foot:'<button class="btn" data-close>取消</button><button class="btn btn-accent" id="phNameSave" data-icon="check">保存</button>',
+    onMount:function(root){
+      const input=$("#phName",root);
+      input.focus();
+      root.querySelector("#phNameSave").addEventListener("click",function(){
+        const v=input.value.trim();
+        if(!v){ toast("请输入名称","","err"); return; }
+        p.name=v;
+        saveState(); closeModal(); refreshAll();
+        toast("已重命名",v);
+      });
+      input.addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); root.querySelector("#phNameSave").click(); } });
+    }});
 }
 
 /* ================= map modal（地图点位，高德底图·国内可用） ================= */
@@ -2161,6 +2185,7 @@ document.addEventListener("click",function(ev){
   const ee=ev.target.closest("[data-edit-exp]"); if(ee){ if(!canEdit()){ toast("普通用户不能修改已同步的记录","如需修改，请联系管理员处理","warn"); return; } openExpenseModal(ee.getAttribute("data-edit-exp")); return; }
   const de=ev.target.closest("[data-del-exp]"); if(de){ if(!canEdit()){ toast("普通用户不能删除已同步的记录","如需删除，请联系管理员处理","warn"); return; } STATE.expenses=STATE.expenses.filter(function(x){return x.id!==de.getAttribute("data-del-exp");}); saveState(); refreshAll(); toast("已删除",""); return; }
   const dl=ev.target.closest("[data-del-loc]"); if(dl){ if(!canEdit()){ toast("普通用户不能删除已同步的记录","请联系管理员处理","warn"); return; } STATE.locations=STATE.locations.filter(function(x){return x.id!==dl.getAttribute("data-del-loc");}); saveState(); refreshAll(); toast("已删除定位",""); return; }
+  const rn=ev.target.closest("[data-rename-photo]"); if(rn){ if(!canEdit()){ toast("普通用户不能修改已同步的照片","重命名请联系管理员处理","warn"); return; } openRenamePhotoModal(rn.getAttribute("data-rename-photo")); return; }
   const dp=ev.target.closest("[data-del-photo]"); if(dp){ if(!canEdit()){ toast("普通用户不能删除已同步的照片","请联系管理员处理","warn"); return; } deletePhoto(dp.getAttribute("data-del-photo")); return; }
   const vp=ev.target.closest("[data-view-photo]"); if(vp){ viewPhoto(vp.getAttribute("data-view-photo")); return; }
   const dr=ev.target.closest("[data-done-rem]"); if(dr){ if(!canEdit()){ toast("普通用户不能修改已同步的记录","请联系管理员处理","warn"); return; } const r=STATE.reminders.filter(function(x){return x.id===dr.getAttribute("data-done-rem");})[0]; if(r){ r.done=true; saveState(); refreshAll(); toast("已完成提醒",r.title); } return; }
