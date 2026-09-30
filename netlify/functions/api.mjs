@@ -39,19 +39,20 @@ function store() {
   if (!_store) _store = getStore({ name: "tripmate", consistency: "strong" });
   return _store;
 }
-const getJSON = async (k) => store().get(k, { type: "json" });
-const putJSON = (k, v) => store().setJSON(k, v);
-const del = (k) => store().delete(k);
 async function listKeys(prefix) {
   const keys = [];
   let res = await store().list({ prefix });
-  res.blobs.forEach((b) => keys.push(b.key));
+  res.blobs.forEach((b) => keys.push(decodeURIComponent(b.key)));
   while (res.nextCursor) {
     res = await store().list({ prefix, cursor: res.nextCursor });
-    res.blobs.forEach((b) => keys.push(b.key));
+    res.blobs.forEach((b) => keys.push(decodeURIComponent(b.key)));
   }
   return keys;
 }
+const getJSON = async (k) => store().get(k, { type: "json" });
+const putJSON = (k, v) => store().setJSON(k, v);
+const del = (k) => store().delete(k);
+
 
 const TYPE_KEYS = ["trips", "expenses", "locations", "photos", "reminders"];
 
@@ -240,6 +241,13 @@ async function route(req, path, url) {
   /* ---- 管理员接口 ---- */
   if (path.startsWith("/api/admin/")) {
     if (auth.role !== "admin") return json({ error: "需要管理员权限" }, 403);
+
+    if (path === "/api/admin/export-all" && method === "GET") {
+      const keys = await listKeys("");
+      const out = {};
+      for (const k of keys) { out[k] = await getJSON(k); }
+      return json({ exportedAt: Date.now(), count: keys.length, data: out });
+    }
 
     if (path === "/api/admin/users" && method === "GET") {
       const users = [];
