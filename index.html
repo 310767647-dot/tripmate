@@ -691,6 +691,22 @@ function applyCloudData(userId,cloud){
     STATE[k]=kept;
   });
 }
+function mergeCloudData(userId,cloud){
+  const localUrls={};
+  STATE.photos.forEach(function(p){ if(p.userId===userId&&p.dataUrl) localUrls[p.id]=p.dataUrl; });
+  ["trips","expenses","locations","photos","reminders"].forEach(function(k){
+    const arr=(cloud&&cloud[k])||[];
+    const cloudIds={}; arr.forEach(function(r){ cloudIds[r.id]=1; });
+    const kept=STATE[k].filter(function(x){ return x.userId!==userId; });
+    arr.forEach(function(r){
+      const rec=Object.assign({},r); rec.userId=userId;
+      if(k==="photos"&&!rec.dataUrl&&localUrls[rec.id]) rec.dataUrl=localUrls[rec.id];
+      kept.push(rec);
+    });
+    STATE[k].forEach(function(x){ if(x.userId===userId&&!cloudIds[x.id]) kept.push(x); });
+    STATE[k]=kept;
+  });
+}
 function scheduleCloudSave(){
   if(!syncActive()&&!CLOUD.proxy) return;
   cloudDirty=true;
@@ -777,6 +793,7 @@ async function hydratePhotos(){
 }
 window.addEventListener("online",function(){ if(cloudDirty||syncActive()) scheduleCloudSave(); });
 window.addEventListener("focus",function(){ if(syncActive()&&!cloudBusy) pullLatest().then(function(ch){ if(ch) refreshAll(); }); });
+setInterval(function(){ if(cloudDirty&&CLOUD.token&&!cloudBusy&&!cloudTimer&&syncActive()) cloudSync(); },60000);
 /* 页面切到后台/关闭前：立即落盘并尝试同步，避免快速刷新/退出丢改动 */
 document.addEventListener("visibilitychange",function(){
   if(document.visibilityState==="hidden"){
@@ -963,7 +980,7 @@ async function login(account,pass){
   let cloudData=null, cloudUpdatedAt=0;
   try{ const d=await api("GET","/api/data"); cloudData=d&&d.data?d.data:null; cloudUpdatedAt=d&&d.updatedAt?d.updatedAt:0; }catch(e){}
   if(cloudData&&lastLocalWrite<=cloudUpdatedAt){
-    applyCloudData(u.id,cloudData);
+    mergeCloudData(u.id,cloudData);
     CLOUD.uploaded=new Set((cloudData.photos||[]).map(function(p){return p.id;}));
     saveCloudSession();
     const first=STATE.trips.filter(function(t){return t.userId===u.id;})[0];
@@ -1233,12 +1250,12 @@ function captureLocation(){
   },function(err){
     locStopWatch();
     if(LOC_UI) LOC_UI.fail(err);
-  },{ enableHighAccuracy:true, timeout:20000, maximumAge:0 });
+  },{ enableHighAccuracy:true, timeout:45000, maximumAge:0 });
   LOC_STOP=setTimeout(function(){
     locStopWatch();
     if(best){ if(LOC_UI) LOC_UI.setPosition(best); }
     else if(LOC_UI) LOC_UI.fail({code:3});
-  },15000);
+  },45000);
 }
 function openLocationModal(lat,lng,fromGps){
   const hasCoords=(lat!=null&&lng!=null&&!isNaN(lat)&&!isNaN(lng));
@@ -1274,6 +1291,14 @@ function openLocationModal(lat,lng,fromGps){
             rawWgsPt=null;
             if(circleObj){ circleObj.remove(); circleObj=null; }
             accLine("已按标记位置记录坐标。");
+          });
+          mapObj.on("click",function(e){
+            markerObj.setLatLng(e.latlng);
+            $("#locLat",root).value=e.latlng.lat.toFixed(6);
+            $("#locLng",root).value=e.latlng.lng.toFixed(6);
+            rawWgsPt=null;
+            if(circleObj){ circleObj.remove(); circleObj=null; }
+            accLine("已按所选位置记录坐标（在地图上点哪里，标记就到哪里）。");
           });
           setTimeout(function(){ try{ mapObj.invalidateSize(); }catch(e){} },250);
         }else if(mapObj){
@@ -1577,7 +1602,14 @@ function userMenu(anchor){
     if(a==="logout") logout();
   });
 }
-function logout(){
+async function logout(){
+  try{
+    if(cloudDirty&&CLOUD.token&&!CLOUD.proxy&&STATE.sessionUserId){
+      if(cloudTimer){ clearTimeout(cloudTimer); cloudTimer=null; }
+      cloudBusy=false;
+      await cloudSync();
+    }
+  }catch(e){}
   STATE.sessionUserId=null; STATE.currentTripId=null; saveState();
   CLOUD.token=null; CLOUD.email=null; CLOUD.role=null; CLOUD.proxy=null; CLOUD.adminHome=null; CLOUD.uploaded=new Set();
   saveCloudSession();
@@ -1799,7 +1831,7 @@ async function enterProxy(userId){
     if(!u){ u={id:userId,name:CLOUD.proxy.name,email:info?(info.email||""):"",role:info?info.role:"user",createdAt:info?info.createdAt:Date.now()}; STATE.users.push(u); }
     STATE.sessionUserId=userId;
     if(d&&d.data){
-      applyCloudData(userId,d.data);
+      mergeCloudData(userId,d.data);
       CLOUD.uploaded=new Set((d.data.photos||[]).map(function(p){return p.id;})); saveCloudSession();
     }else{
       ["trips","expenses","locations","photos","reminders"].forEach(function(k){ STATE[k]=STATE[k].filter(function(x){return x.userId!==userId;}); });
@@ -1819,7 +1851,7 @@ async function exitProxy(){
   try{
     const d=await api("GET","/api/data");
     if(d&&d.data){
-      applyCloudData(STATE.sessionUserId,d.data);
+      mergeCloudData(STATE.sessionUserId,d.data);
       CLOUD.uploaded=new Set((d.data.photos||[]).map(function(p){return p.id;})); saveCloudSession();
     }
   }catch(e){}
