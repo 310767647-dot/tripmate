@@ -24,20 +24,41 @@ const newToken = () => crypto.randomBytes(24).toString("hex");
    存在时优先通过 api.netlify.com 的 Blobs 接口访问，不再依赖会过期的注入令牌。 */
 const SITE_ID = "0e636af7-1c8e-49c7-ac76-a1b68419af00";
 const FALLBACK_TOKEN = "nfc_dHAP7xbAuw9K1VEBGBee6jVsJ8XaeTUdb1ee"; // 永久凭证通道（api.netlify.com，永不过期）
-let _store = null;
+const BLOBS_API = "https://api.netlify.com/api/v1/blobs/" + SITE_ID + "/tripmate/";
+const BLOBS_HEADERS = { authorization: "Bearer " + FALLBACK_TOKEN };
+const blobURL = (k) => BLOBS_API + encodeURIComponent(k);
+const blobGet = async (k) => {
+  const r = await fetch(blobURL(k), { headers: BLOBS_HEADERS });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error("blobs get failed: " + r.status);
+  const text = await r.text();
+  if (!text) return null;
+  try { return JSON.parse(text); } catch { return text; }
+};
+const blobSet = async (k, v) => {
+  const r = await fetch(blobURL(k), { method: "PUT", headers: { ...BLOBS_HEADERS, "content-type": "application/octet-stream" }, body: JSON.stringify(v) });
+  if (!r.ok) throw new Error("blobs set failed: " + r.status);
+};
+const blobDel = async (k) => {
+  const r = await fetch(blobURL(k), { method: "DELETE", headers: BLOBS_HEADERS });
+  if (!r.ok && r.status !== 404) throw new Error("blobs delete failed: " + r.status);
+};
+const blobList = async (prefix, cursor) => {
+  const q = new URLSearchParams({ recursive: "true" });
+  if (prefix) q.set("prefix", prefix);
+  if (cursor) q.set("cursor", cursor);
+  const r = await fetch(BLOBS_API + "?" + q.toString(), { headers: BLOBS_HEADERS });
+  if (!r.ok) throw new Error("blobs list failed: " + r.status);
+  const d = await r.json();
+  return { blobs: (d.blobs || []).map((b) => ({ key: b.key })), nextCursor: d.nextCursor || null };
+};
 function store() {
-  if (!_store) _store = getStore({ name: "tripmate", consistency: "strong", siteID: SITE_ID, token: FALLBACK_TOKEN, apiURL: "https://api.netlify.com" });
-  return _store;
-}
-async function listKeys(prefix) {
-  const keys = [];
-  let res = await store().list({ prefix });
-  res.blobs.forEach((b) => keys.push(decodeURIComponent(b.key)));
-  while (res.nextCursor) {
-    res = await store().list({ prefix, cursor: res.nextCursor });
-    res.blobs.forEach((b) => keys.push(decodeURIComponent(b.key)));
-  }
-  return keys;
+  return {
+    get: (k) => blobGet(k),
+    setJSON: (k, v) => blobSet(k, v),
+    delete: (k) => blobDel(k),
+    list: (opts) => blobList(opts && opts.prefix, opts && opts.cursor)
+  };
 }
 const getJSON = async (k) => store().get(k, { type: "json" });
 const putJSON = (k, v) => store().setJSON(k, v);
