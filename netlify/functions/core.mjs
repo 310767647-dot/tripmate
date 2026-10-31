@@ -45,12 +45,13 @@ const blobDel = async (k) => {
 };
 const blobList = async (prefix, cursor) => {
   const q = new URLSearchParams({ recursive: "true" });
-  if (prefix) q.set("prefix", prefix);
   if (cursor) q.set("cursor", cursor);
   const r = await fetch(BLOBS_API + "?" + q.toString(), { headers: BLOBS_HEADERS });
   if (!r.ok) throw new Error("blobs list failed: " + r.status);
   const d = await r.json();
-  return { blobs: (d.blobs || []).map((b) => ({ key: b.key })), nextCursor: d.nextCursor || null };
+  let blobs = d.blobs || [];
+  if (prefix) blobs = blobs.filter((b) => { try { return decodeURIComponent(b.key).startsWith(prefix); } catch { return b.key.startsWith(prefix); } });
+  return { blobs: blobs.map((b) => ({ key: b.key })), nextCursor: d.nextCursor || null };
 };
 function store() {
   return {
