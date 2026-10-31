@@ -61,6 +61,16 @@ function store() {
     list: (opts) => blobList(opts && opts.prefix, opts && opts.cursor)
   };
 }
+async function listKeys(prefix) {
+  const keys = [];
+  let res = await store().list({ prefix });
+  res.blobs.forEach((b) => keys.push(decodeURIComponent(b.key)));
+  while (res.nextCursor) {
+    res = await store().list({ prefix, cursor: res.nextCursor });
+    res.blobs.forEach((b) => keys.push(decodeURIComponent(b.key)));
+  }
+  return keys;
+}
 const getJSON = async (k) => store().get(k, { type: "json" });
 const putJSON = (k, v) => store().setJSON(k, v);
 const del = (k) => store().delete(k);
@@ -253,13 +263,6 @@ async function route(req, path, url) {
   /* ---- 管理员接口 ---- */
   if (path.startsWith("/api/admin/")) {
     if (auth.role !== "admin") return json({ error: "需要管理员权限" }, 403);
-
-    if (path === "/api/admin/debug-list" && method === "GET") {
-      const q = new URLSearchParams({ recursive: "true" });
-      const r = await fetch(BLOBS_API + "?" + q.toString(), { headers: BLOBS_HEADERS });
-      const text = await r.text();
-      return json({ status: r.status, len: text.length, head: text.slice(0, 300) });
-    }
 
     if (path === "/api/admin/export-all" && method === "GET") {
       const keys = await listKeys("");
