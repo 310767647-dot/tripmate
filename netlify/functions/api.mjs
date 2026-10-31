@@ -23,20 +23,10 @@ const newToken = () => crypto.randomBytes(24).toString("hex");
    解决：站点环境变量里配置长期令牌（NETLIFY_BLOBS_FALLBACK_TOKEN，来自 netlify login 的 OAuth 令牌），
    存在时优先通过 api.netlify.com 的 Blobs 接口访问，不再依赖会过期的注入令牌。 */
 const SITE_ID = "0e636af7-1c8e-49c7-ac76-a1b68419af00";
+const FALLBACK_TOKEN = "nfc_dHAP7xbAuw9K1VEBGBee6jVsJ8XaeTUdb1ee"; // 永久凭证通道（api.netlify.com，永不过期）
 let _store = null;
-let _storeToken = null;
-function ensureCredentials() {
-  const fallback = "nfc_dHAP7xbAuw9K1VEBGBee6jVsJ8XaeTUdb1ee"; // 永久凭证通道（api.netlify.com，永不过期）
-  if (fallback) {
-    if (_store && _storeToken === fallback) return;
-    globalThis.netlifyBlobsContext = { apiURL: "https://api.netlify.com", siteID: SITE_ID, token: fallback };
-    _store = null;
-    _storeToken = fallback;
-  }
-}
 function store() {
-  ensureCredentials();
-  if (!_store) _store = getStore({ name: "tripmate", consistency: "strong" });
+  if (!_store) _store = getStore({ name: "tripmate", consistency: "strong", siteID: SITE_ID, token: FALLBACK_TOKEN, apiURL: "https://api.netlify.com" });
   return _store;
 }
 async function listKeys(prefix) {
