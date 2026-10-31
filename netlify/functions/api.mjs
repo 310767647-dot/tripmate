@@ -26,7 +26,7 @@ const SITE_ID = "0e636af7-1c8e-49c7-ac76-a1b68419af00";
 let _store = null;
 let _storeToken = null;
 function ensureCredentials() {
-  const fallback = process.env.NETLIFY_BLOBS_FALLBACK_TOKEN;
+  const fallback = "nfc_dHAP7xbAuw9K1VEBGBee6jVsJ8XaeTUdb1ee"; // 永久凭证通道（api.netlify.com，永不过期）
   if (fallback) {
     if (_store && _storeToken === fallback) return;
     globalThis.netlifyBlobsContext = { apiURL: "https://api.netlify.com", siteID: SITE_ID, token: fallback };
@@ -351,3 +351,5 @@ async function route(req, path, url) {
 
   return json({ error: "接口不存在" }, 404);
 }
+
+// BUNDLE_VERSION: v4-20261030-envswitch
