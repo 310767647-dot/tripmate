@@ -264,27 +264,29 @@ async function route(req, path, url) {
     if (path === "/api/admin/export-all" && method === "GET") {
       const keys = await listKeys("");
       const out = {};
-      for (const k of keys) { out[k] = await getJSON(k); }
+      const entries = await Promise.all(keys.map(async (k) => [k, await getJSON(k)]));
+      entries.forEach(([k, v]) => { out[k] = v; });
       return json({ exportedAt: Date.now(), count: keys.length, data: out });
     }
 
     if (path === "/api/admin/users" && method === "GET") {
       const users = [];
       const blobKeys = await listKeys("u:");
-      for (const bkey of blobKeys) {
+      const users0 = await Promise.all(blobKeys.map(async (bkey) => {
         const u = await getJSON(bkey);
-        if (!u || u.ref) continue;
+        if (!u || u.ref) return null;
         const d = await getJSON("d:" + u.id);
         const data = d && d.data ? d.data : null;
-        users.push({
+        return {
           id: u.id, name: u.name, email: u.email, username: u.username || null,
           role: u.role || "user", createdAt: u.createdAt,
           counts: data
             ? { trips: (data.trips || []).length, expenses: (data.expenses || []).length, locations: (data.locations || []).length, photos: (data.photos || []).length, reminders: (data.reminders || []).length }
             : null,
           updatedAt: d ? d.updatedAt : null,
-        });
-      }
+        };
+      }));
+      users0.filter(Boolean).forEach((u) => users.push(u));
       users.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
       return json({ users });
     }
