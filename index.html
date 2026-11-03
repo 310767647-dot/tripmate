@@ -656,6 +656,16 @@ async function photoCacheGet(id){
     });
   }catch(e){ return null; }
 }
+async function photoCacheDel(id){
+  try{
+    const db=await idbOpen();
+    await new Promise(function(res){
+      const tx=db.transaction("photos","readwrite");
+      tx.objectStore("photos").delete(id);
+      tx.oncomplete=function(){ res(); }; tx.onerror=function(){ res(); };
+    });
+  }catch(e){}
+}
 async function photoCacheSet(id,dataUrl){
   try{
     const db=await idbOpen();
@@ -742,7 +752,23 @@ async function cloudSync(){
   }catch(e){
     setSyncStatus("err");
     if(!CLOUD.errToasted){ CLOUD.errToasted=true; toast("云端同步失败","稍后自动重试："+e.message,"warn"); }
-    if(e.status===403&&!CLOUD.proxy){ pullLatest().then(function(){ refreshAll(); }); }
+    if(e.status===403&&!CLOUD.proxy){
+      (async function(){
+        try{
+          const r2=await api("GET","/api/data");
+          if(r2&&r2.data){
+            applyCloudData(STATE.sessionUserId,r2.data);
+            CLOUD.uploaded=new Set((r2.data.photos||[]).map(function(p){return p.id;})); saveCloudSession();
+            await hydratePhotos();
+            lastLocalWrite=r2.updatedAt||Date.now();
+            try{ LS.setItem("tm_lastwrite",String(lastLocalWrite)); }catch(e2){}
+            saveState(); cloudDirty=false; setSyncStatus("ok");
+            toast("已按云端数据恢复","本机与云端冲突的改动已按云端记录校正","warn");
+            refreshAll();
+          }
+        }catch(e2){}
+      })();
+    }
   }finally{
     cloudBusy=false;
     if(cloudDirty&&!cloudTimer) cloudTimer=setTimeout(cloudSync,5000);
@@ -973,6 +999,13 @@ async function login(account,pass){
   CLOUD.token=r.token; CLOUD.email=(r.email||account).toLowerCase(); CLOUD.role=r.role||su.role||"user";
   CLOUD.proxy=null; CLOUD.adminHome=null; CLOUD.uploaded=new Set(); CLOUD.errToasted=false;
   saveCloudSession();
+  const localSame=STATE.users.filter(function(x){return x.email===CLOUD.email&&x.id!==r.userId;})[0];
+  if(localSame){
+    ["trips","expenses","locations","photos","reminders"].forEach(function(k){
+      STATE[k].forEach(function(x){ if(x.userId===localSame.id) x.userId=r.userId; });
+    });
+    STATE.users=STATE.users.filter(function(x){return x.id!==localSame.id;});
+  }
   let u=STATE.users.filter(function(x){return x.id===r.userId;})[0];
   if(!u){ u={id:r.userId,name:r.name,email:CLOUD.email,createdAt:Date.now(),role:CLOUD.role}; STATE.users.push(u); }
   else{ u.id=r.userId; u.name=r.name; u.role=CLOUD.role; }
@@ -991,12 +1024,20 @@ async function login(account,pass){
     hydratePhotos().then(function(h){ if(h) refreshAll(); });
   }else{
     const hasLocal=STATE.trips.some(function(t){return t.userId===u.id;});
-    if(!hasLocal){
-      const t={id:uid(),userId:u.id,name:"我的出差",from:"",to:"",startDate:new Date().toISOString().slice(0,10),endDate:"",purpose:"",createdAt:Date.now()};
-      STATE.trips.push(t); STATE.currentTripId=t.id;
-    }else{
+    if(hasLocal){
       const first=STATE.trips.filter(function(t){return t.userId===u.id;})[0];
       STATE.currentTripId=first?first.id:null;
+    }else if(cloudData){
+      mergeCloudData(u.id,cloudData);
+      CLOUD.uploaded=new Set((cloudData.photos||[]).map(function(p){return p.id;}));
+      saveCloudSession();
+      const first=STATE.trips.filter(function(t){return t.userId===u.id;})[0];
+      STATE.currentTripId=first?first.id:null;
+      hydratePhotos().then(function(h){ if(h) refreshAll(); });
+      toast("已恢复云端记录","本机没有该账号数据，已从云端完整恢复","ok");
+    }else{
+      const t={id:uid(),userId:u.id,name:"我的出差",from:"",to:"",startDate:new Date().toISOString().slice(0,10),endDate:"",purpose:"",createdAt:Date.now()};
+      STATE.trips.push(t); STATE.currentTripId=t.id;
     }
     saveState();
   }
@@ -1377,7 +1418,7 @@ function renderPhoto(){
   let html="";
   const canDelPhoto=canEdit();
   photos.forEach(function(p){
-    html+='<div class="pcard"><img src="'+(p.dataUrl||"")+'" alt="'+esc(p.name||"现场照片")+'" data-view-photo="'+p.id+'"><div class="pcap"><div class="pm"><b>'+esc(p.name||"现场照片")+"</b><span>"+esc(fmtDate(p.ts))+'</span></div>'+(canDelPhoto?'<button class="iconbtn" data-rename-photo="'+p.id+'" title="重命名" data-icon="edit"></button><button class="iconbtn" data-del-photo="'+p.id+'" title="删除" data-icon="trash"></button>':'')+'</div></div>';
+    html+='<div class="pcard"><img src="'+(p.dataUrl||"data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==")+'" alt="'+esc(p.name||"现场照片")+'" data-view-photo="'+p.id+'"><div class="pcap"><div class="pm"><b>'+esc(p.name||"现场照片")+"</b><span>"+esc(fmtDate(p.ts))+'</span></div>'+(canDelPhoto?'<button class="iconbtn" data-rename-photo="'+p.id+'" title="重命名" data-icon="edit"></button><button class="iconbtn" data-del-photo="'+p.id+'" title="删除" data-icon="trash"></button>':'')+'</div></div>';
   });
   grid.innerHTML=html;
   renderIcons(grid);
@@ -1436,7 +1477,7 @@ function viewPhoto(id){
   const p=STATE.photos.filter(function(x){return x.id===id;})[0]; if(!p) return;
   const show=function(){
     if(!p.dataUrl){
-      openModal({title:p.name||"票据照片",body:'<p style="color:var(--muted);font-size:13.5px">照片正在从云端加载，请稍候…</p>',foot:'<button class="btn" data-close>关闭</button>'});
+      openModal({title:p.name||"现场照片",body:'<p style="color:var(--muted);font-size:13.5px">照片正在从云端加载，请稍候…</p>',foot:'<button class="btn" data-close>关闭</button>'});
       return;
     }
     openModal({title:p.name||"现场照片",body:'<img src="'+p.dataUrl+'" alt="现场照片" style="width:100%;border-radius:11px;border:1px solid var(--line)"><p style="font-size:12.5px;color:var(--muted);margin-top:10px">'+esc(fmtDT(p.ts))+"</p>",foot:(canEdit()?'<button class="btn" id="pvRename" data-icon="edit">重命名</button><button class="btn" data-close>关闭</button><button class="btn btn-danger" id="pvDel" data-icon="trash">删除</button>':'<button class="btn" data-close>关闭</button>'),onMount:function(root){ const del=root.querySelector("#pvDel"); if(del) del.addEventListener("click",function(){ deletePhoto(id); closeModal(); }); const rn=root.querySelector("#pvRename"); if(rn) rn.addEventListener("click",function(){ closeModal(); openRenamePhotoModal(id); }); }});
@@ -1662,11 +1703,12 @@ function importData(){
         const d=JSON.parse(reader.result);
         if(!d||!Array.isArray(d.trips)) throw new Error("bad");
         const keep=STATE.sessionUserId;
-        d.trips.forEach(function(t){ t.userId=keep; STATE.trips.push(t); });
-        (d.expenses||[]).forEach(function(x){ x.userId=keep; STATE.expenses.push(x); });
-        (d.locations||[]).forEach(function(x){ x.userId=keep; STATE.locations.push(x); });
-        (d.photos||[]).forEach(function(x){ x.userId=keep; STATE.photos.push(x); });
-        (d.reminders||[]).forEach(function(x){ x.userId=keep; STATE.reminders.push(x); });
+        const notDup=function(arr,x){ return !arr.some(function(y){return y.id===x.id;}); };
+        d.trips.forEach(function(t){ if(notDup(STATE.trips,t)){ t.userId=keep; STATE.trips.push(t); } });
+        (d.expenses||[]).forEach(function(x){ if(notDup(STATE.expenses,x)){ x.userId=keep; STATE.expenses.push(x); } });
+        (d.locations||[]).forEach(function(x){ if(notDup(STATE.locations,x)){ x.userId=keep; STATE.locations.push(x); } });
+        (d.photos||[]).forEach(function(x){ if(notDup(STATE.photos,x)){ x.userId=keep; STATE.photos.push(x); } });
+        (d.reminders||[]).forEach(function(x){ if(notDup(STATE.reminders,x)){ x.userId=keep; STATE.reminders.push(x); } });
         if(!curTrip()&&d.trips[0]) STATE.currentTripId=d.trips[0].id;
         saveState(); refreshAll(); toast("数据已导入","已合并到当前账号");
       }catch(e){ toast("导入失败","文件格式不正确","err"); }
@@ -1975,10 +2017,10 @@ function archiveDocHTML(bundles,opts){
     }
     const withUrl=b.photos.filter(function(p){return p.dataUrl;});
     if(b.photos.length){
-      h+='<div class="h3">票据照片（'+b.photos.length+' 张）</div>';
+      h+='<div class="h3">现场照片（'+b.photos.length+' 张）</div>';
       if(withUrl.length){
         h+='<div class="photorow">';
-        withUrl.forEach(function(p){ h+='<figure><img src="'+p.dataUrl+'" /><figcaption>'+esc(p.name||"票据照片")+"</figcaption></figure>"; });
+        withUrl.forEach(function(p){ h+='<figure><img src="'+p.dataUrl+'" /><figcaption>'+esc(p.name||"现场照片")+"</figcaption></figure>"; });
         h+="</div>";
       }else{ h+='<p class="muted">照片已云端保存（批量导出时不再嵌入图片）。</p>'; }
     }
@@ -2194,6 +2236,7 @@ document.addEventListener("click",function(ev){
 });
 function deletePhoto(id){
   STATE.photos=STATE.photos.filter(function(x){return x.id!==id;});
+  photoCacheDel(id);
   saveState(); refreshAll(); toast("已删除照片","");
 }
 
