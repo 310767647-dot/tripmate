@@ -1,4 +1,3 @@
-import { getStore } from "@netlify/blobs";
 import crypto from "node:crypto";
 
 /* TripMate 云端后端（Netlify Functions v2 + Netlify Blobs）
@@ -19,9 +18,8 @@ const json = (body, status = 200, headers = {}) =>
 const sha = (s) => crypto.createHash("sha256").update(String(s)).digest("hex");
 const newToken = () => crypto.randomBytes(24).toString("hex");
 
-/* Netlify 部署时注入的 Blobs 令牌只有 15 分钟有效期且不会自动刷新（CLI 手工部署的已知限制）。
-   解决：站点环境变量里配置长期令牌（NETLIFY_BLOBS_FALLBACK_TOKEN，来自 netlify login 的 OAuth 令牌），
-   存在时优先通过 api.netlify.com 的 Blobs 接口访问，不再依赖会过期的注入令牌。 */
+/* 存储直连 api.netlify.com 的 Blobs 接口 + 长期 OAuth 令牌（netlify login 凭证），
+   不依赖部署时注入的临时上下文（注入令牌会过期，曾导致间歇性同步失败）。 */
 const SITE_ID = "0e636af7-1c8e-49c7-ac76-a1b68419af00";
 const FALLBACK_TOKEN = "nfc_dHAP7xbAuw9K1VEBGBee6jVsJ8XaeTUdb1ee"; // 永久凭证通道（api.netlify.com，永不过期）
 const BLOBS_API = "https://api.netlify.com/api/v1/blobs/" + SITE_ID + "/tripmate/";
@@ -175,6 +173,10 @@ async function route(req, path, url) {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: "邮箱格式不正确" }, 400);
     if (!body.salt || !body.hash) return json({ error: "缺少凭据" }, 400);
     if (await findUser(email)) return json({ error: "该邮箱已注册，请直接登录" }, 409);
+    if (body.userId) {
+      if (!/^[A-Za-z0-9_-]{6,40}$/.test(String(body.userId))) body.userId = null;
+      else if (await getJSON("d:" + String(body.userId))) return json({ error: "账号标识冲突，请重新注册" }, 409);
+    }
     const u = {
       id: String(body.userId || crypto.randomUUID()),
       name: String(body.name || "用户").trim().slice(0, 40),
@@ -324,12 +326,10 @@ async function route(req, path, url) {
     if (um) {
       const uid = um[1];
       const tKeys = await listKeys("u:");
-      let tu = null;
-      for (const bkey of tKeys) {
-        const cand = await getJSON(bkey);
-        if (cand && !cand.ref && cand.id === uid) { tu = { key: bkey, u: cand }; break; }
-      }
-      if (!tu) return json({ error: "用户不存在" }, 404);
+      const cands = await Promise.all(tKeys.map(async (bkey) => ({ bkey: bkey, u: await getJSON(bkey) })));
+      const found = cands.filter((c) => c.u && !c.u.ref && c.u.id === uid)[0];
+      if (!found) return json({ error: "用户不存在" }, 404);
+      const tu = { key: found.bkey, u: found.u };
       if (method === "PUT") {
         const body = await req.json().catch(() => ({}));
         if (body.name) tu.u.name = String(body.name).trim().slice(0, 40);
@@ -376,4 +376,4 @@ async function route(req, path, url) {
   return json({ error: "接口不存在" }, 404);
 }
 
-// BUNDLE_VERSION: v4-20261030-envswitch
+// BUNDLE_VERSION: v5-final-20261103
